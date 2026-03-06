@@ -1,0 +1,1084 @@
+[
+  {
+    "id": "q001",
+    "type": "mcq",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the time complexity of binary search?",
+    "choices": { "A": "O(1)", "B": "O(log n)", "C": "O(n)", "D": "O(n log n)" },
+    "answer": "B",
+    "explanation": "Binary search halves the remaining search space each step."
+  },
+  {
+    "id": "q002",
+    "type": "mcq",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the average time complexity of appending to a Python list?",
+    "choices": { "A": "O(1)", "B": "O(log n)", "C": "O(n)", "D": "O(n^2)" },
+    "answer": "A",
+    "explanation": "Python lists use amortized O(1) append via dynamic array resizing."
+  },
+  {
+    "id": "q003",
+    "type": "mcq",
+    "topic": "Data Structures",
+    "difficulty": "easy",
+    "question": "Which data structure uses FIFO ordering?",
+    "choices": { "A": "Stack", "B": "Queue", "C": "Heap", "D": "Set" },
+    "answer": "B",
+    "explanation": "A queue processes elements in First-In-First-Out order."
+  },
+  {
+    "id": "q004",
+    "type": "mcq",
+    "topic": "Data Structures",
+    "difficulty": "easy",
+    "question": "Which data structure uses LIFO ordering?",
+    "choices": { "A": "Queue", "B": "Deque", "C": "Stack", "D": "Linked List" },
+    "answer": "C",
+    "explanation": "A stack processes elements in Last-In-First-Out order."
+  },
+  {
+    "id": "q005",
+    "type": "mcq",
+    "topic": "Runtime",
+    "difficulty": "medium",
+    "question": "What is the worst-case time complexity of quicksort?",
+    "choices": { "A": "O(n)", "B": "O(n log n)", "C": "O(n^2)", "D": "O(log n)" },
+    "answer": "C",
+    "explanation": "Quicksort degrades to O(n^2) when the pivot is always the smallest or largest element."
+  },
+  {
+    "id": "q006",
+    "type": "mcq",
+    "topic": "Graphs",
+    "difficulty": "medium",
+    "question": "What data structure does BFS typically use?",
+    "choices": { "A": "Stack", "B": "Queue", "C": "Heap", "D": "Hash Map" },
+    "answer": "B",
+    "explanation": "BFS explores level by level using a queue."
+  },
+  {
+    "id": "q007",
+    "type": "fill_code",
+    "topic": "Hash Map",
+    "difficulty": "easy",
+    "question": "Complete the blank to check for a complement:\n\n  if target - num in ________:",
+    "answer": ["seen", "hash_map", "lookup", "d", "s"],
+    "explanation": "A set or dictionary allows average O(1) membership checks for the complement."
+  },
+  {
+    "id": "q008",
+    "type": "fill_code",
+    "topic": "Linked List",
+    "difficulty": "easy",
+    "question": "Advance to the next node:\n\n  current = current.________",
+    "answer": ["next", "next_node"],
+    "explanation": "In a singly linked list, each node has a .next pointer to the following node."
+  },
+  {
+    "id": "q009",
+    "type": "fill_code",
+    "topic": "Stack",
+    "difficulty": "easy",
+    "question": "Remove and return the top element:\n\n  top = stack.________()",
+    "answer": ["pop"],
+    "explanation": "The pop() method removes and returns the last element, acting as a stack top removal."
+  },
+  {
+    "id": "q010",
+    "type": "fill_code",
+    "topic": "Binary Search",
+    "difficulty": "easy",
+    "question": "Update the midpoint in binary search:\n\n  mid = (low + high) ________ 2",
+    "answer": ["//"],
+    "explanation": "Integer division (//) is used to compute the midpoint index."
+  },
+  {
+    "id": "q011",
+    "type": "fill_code",
+    "topic": "Heap",
+    "difficulty": "medium",
+    "question": "Push a value onto a min-heap:\n\n  heapq.________(heap, val)",
+    "answer": ["heappush"],
+    "explanation": "heapq.heappush() adds an element while maintaining the heap invariant."
+  },
+  {
+    "id": "q012",
+    "type": "fill_code",
+    "topic": "Queue",
+    "difficulty": "easy",
+    "question": "Add to the right end of a deque:\n\n  q.________(val)",
+    "answer": ["append"],
+    "explanation": "deque.append() adds to the right end in O(1) time."
+  },
+  {
+    "id": "q013",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(len([1, 2, 3, 4]))",
+    "answer": "4",
+    "explanation": "The list has 4 elements, so len() returns 4."
+  },
+  {
+    "id": "q014",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(type({}).__name__)",
+    "answer": "dict",
+    "explanation": "Empty braces {} create a dict in Python, not a set."
+  },
+  {
+    "id": "q015",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  x = [1, 2, 3]\n  print(x[-1])",
+    "answer": "3",
+    "explanation": "Negative indexing starts from the end; -1 is the last element."
+  },
+  {
+    "id": "q016",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "medium",
+    "question": "What does this print?\n\n  print('hello'[::-1])",
+    "answer": "olleh",
+    "explanation": "Slicing with step -1 reverses the string."
+  },
+  {
+    "id": "q017",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "medium",
+    "question": "What does this print?\n\n  a = [1, 2, 3]\n  b = a\n  b.append(4)\n  print(len(a))",
+    "answer": "4",
+    "explanation": "b = a does not copy the list; both names point to the same object."
+  },
+  {
+    "id": "q018",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(bool([]))",
+    "answer": "False",
+    "explanation": "Empty containers are falsy in Python."
+  },
+  {
+    "id": "q019",
+    "type": "short_answer",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the time complexity of looking up a key in a hash map (average case)?",
+    "answer": ["O(1)"],
+    "explanation": "Hash maps provide average O(1) lookup via hashing."
+  },
+  {
+    "id": "q020",
+    "type": "short_answer",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the time complexity of merge sort?",
+    "answer": ["O(n log n)", "O(nlogn)"],
+    "explanation": "Merge sort always divides in half and merges in linear time: O(n log n)."
+  },
+  {
+    "id": "q021",
+    "type": "short_answer",
+    "topic": "Runtime",
+    "difficulty": "medium",
+    "question": "What is the space complexity of DFS on a graph with V vertices?",
+    "answer": ["O(V)", "O(v)"],
+    "explanation": "DFS uses a stack (implicit or explicit) that can hold up to V vertices."
+  },
+  {
+    "id": "q022",
+    "type": "short_answer",
+    "topic": "Data Structures",
+    "difficulty": "easy",
+    "question": "What data structure would you use to track the frequency of each character in a string?",
+    "answer": ["hash map", "hashmap", "dictionary", "dict", "counter", "hash table"],
+    "explanation": "A hash map (dictionary) maps each character to its count in O(n) time."
+  },
+  {
+    "id": "q023",
+    "type": "short_answer",
+    "topic": "Data Structures",
+    "difficulty": "medium",
+    "question": "What data structure lets you efficiently get both the minimum and maximum element?",
+    "answer": ["balanced bst", "sorted set", "treemap", "red-black tree", "avl tree", "ordered set"],
+    "explanation": "A balanced BST (or sorted container) supports min/max retrieval in O(log n)."
+  },
+  {
+    "id": "q024",
+    "type": "mcq",
+    "topic": "Graphs",
+    "difficulty": "medium",
+    "question": "What is the time complexity of DFS on a graph with V vertices and E edges?",
+    "choices": { "A": "O(V)", "B": "O(E)", "C": "O(V + E)", "D": "O(V * E)" },
+    "answer": "C",
+    "explanation": "DFS visits every vertex and traverses every edge once: O(V + E)."
+  },
+  {
+    "id": "q025",
+    "type": "mcq",
+    "topic": "Trees",
+    "difficulty": "easy",
+    "question": "How many children can each node have in a binary tree?",
+    "choices": { "A": "1", "B": "At most 2", "C": "Exactly 2", "D": "Unlimited" },
+    "answer": "B",
+    "explanation": "In a binary tree, each node has at most two children (left and right)."
+  },
+
+  {
+    "id": "q026",
+    "type": "mcq",
+    "topic": "Arrays",
+    "difficulty": "easy",
+    "question": "What is the time complexity of accessing an element by index in an array?",
+    "choices": { "A": "O(1)", "B": "O(log n)", "C": "O(n)", "D": "O(n^2)" },
+    "answer": "A",
+    "explanation": "Arrays provide O(1) random access because elements are stored in contiguous memory."
+  },
+  {
+    "id": "q027",
+    "type": "mcq",
+    "topic": "Arrays",
+    "difficulty": "easy",
+    "question": "What is the time complexity of inserting at the beginning of a Python list?",
+    "choices": { "A": "O(1)", "B": "O(log n)", "C": "O(n)", "D": "O(n^2)" },
+    "answer": "C",
+    "explanation": "All existing elements must shift right to make room, which takes O(n)."
+  },
+  {
+    "id": "q028",
+    "type": "mcq",
+    "topic": "Arrays",
+    "difficulty": "easy",
+    "question": "What does it mean for an array to be sorted in-place?",
+    "choices": { "A": "A new sorted array is returned", "B": "The original array is modified without extra space", "C": "It uses a hash map", "D": "It uses recursion" },
+    "answer": "B",
+    "explanation": "In-place means the algorithm sorts by rearranging elements within the original array using O(1) extra space."
+  },
+  {
+    "id": "q029",
+    "type": "mcq",
+    "topic": "Strings",
+    "difficulty": "easy",
+    "question": "Are Python strings mutable or immutable?",
+    "choices": { "A": "Mutable", "B": "Immutable", "C": "Depends on the string", "D": "Only mutable inside functions" },
+    "answer": "B",
+    "explanation": "Python strings are immutable. Any operation that modifies a string creates a new one."
+  },
+  {
+    "id": "q030",
+    "type": "mcq",
+    "topic": "Strings",
+    "difficulty": "easy",
+    "question": "What is the time complexity of concatenating two strings of length n and m?",
+    "choices": { "A": "O(1)", "B": "O(n)", "C": "O(n + m)", "D": "O(n * m)" },
+    "answer": "C",
+    "explanation": "A new string must be created and both strings copied into it, taking O(n + m)."
+  },
+  {
+    "id": "q031",
+    "type": "mcq",
+    "topic": "Hash Map",
+    "difficulty": "easy",
+    "question": "What happens when two keys hash to the same index?",
+    "choices": { "A": "An error is raised", "B": "The second key overwrites the first", "C": "A collision occurs", "D": "The hash map doubles in size" },
+    "answer": "C",
+    "explanation": "A collision occurs and must be resolved, typically via chaining or open addressing."
+  },
+  {
+    "id": "q032",
+    "type": "mcq",
+    "topic": "Hash Map",
+    "difficulty": "easy",
+    "question": "Which Python built-in type is a hash map?",
+    "choices": { "A": "list", "B": "tuple", "C": "dict", "D": "set" },
+    "answer": "C",
+    "explanation": "Python's dict is implemented as a hash map, mapping keys to values."
+  },
+  {
+    "id": "q033",
+    "type": "mcq",
+    "topic": "Sets",
+    "difficulty": "easy",
+    "question": "What is the average time complexity of checking membership in a Python set?",
+    "choices": { "A": "O(1)", "B": "O(log n)", "C": "O(n)", "D": "O(n log n)" },
+    "answer": "A",
+    "explanation": "Sets use hashing internally, providing average O(1) membership checks."
+  },
+  {
+    "id": "q034",
+    "type": "mcq",
+    "topic": "Sets",
+    "difficulty": "easy",
+    "question": "Can a Python set contain duplicate elements?",
+    "choices": { "A": "Yes", "B": "No", "C": "Only if they are strings", "D": "Only if they are numbers" },
+    "answer": "B",
+    "explanation": "Sets automatically discard duplicates. Each element appears at most once."
+  },
+  {
+    "id": "q035",
+    "type": "mcq",
+    "topic": "Linked List",
+    "difficulty": "easy",
+    "question": "What is the time complexity of inserting at the head of a linked list?",
+    "choices": { "A": "O(1)", "B": "O(log n)", "C": "O(n)", "D": "O(n^2)" },
+    "answer": "A",
+    "explanation": "You just create a new node, point it to the old head, and update the head pointer."
+  },
+  {
+    "id": "q036",
+    "type": "mcq",
+    "topic": "Linked List",
+    "difficulty": "easy",
+    "question": "What is the time complexity of searching for a value in an unsorted linked list?",
+    "choices": { "A": "O(1)", "B": "O(log n)", "C": "O(n)", "D": "O(n^2)" },
+    "answer": "C",
+    "explanation": "You must traverse the list node by node in the worst case, which takes O(n)."
+  },
+  {
+    "id": "q037",
+    "type": "mcq",
+    "topic": "Linked List",
+    "difficulty": "easy",
+    "question": "What advantage does a linked list have over an array?",
+    "choices": { "A": "Faster random access", "B": "O(1) insertion/deletion at any known position", "C": "Uses less memory", "D": "Built-in sorting" },
+    "answer": "B",
+    "explanation": "Once you have a reference to a node, inserting or deleting next to it is O(1) since no shifting is needed."
+  },
+  {
+    "id": "q038",
+    "type": "mcq",
+    "topic": "Stack",
+    "difficulty": "easy",
+    "question": "Which real-world feature is best modeled by a stack?",
+    "choices": { "A": "A printer queue", "B": "The undo button", "C": "A phone book", "D": "A playlist shuffle" },
+    "answer": "B",
+    "explanation": "Undo reverses the most recent action first (LIFO), just like a stack."
+  },
+  {
+    "id": "q039",
+    "type": "mcq",
+    "topic": "Queue",
+    "difficulty": "easy",
+    "question": "Which real-world scenario is best modeled by a queue?",
+    "choices": { "A": "A deck of cards (draw from top)", "B": "Waiting in line at a store", "C": "Recursion", "D": "Binary search" },
+    "answer": "B",
+    "explanation": "A line at a store is FIFO: the first person in line is the first served."
+  },
+  {
+    "id": "q040",
+    "type": "mcq",
+    "topic": "Sorting",
+    "difficulty": "easy",
+    "question": "What is the time complexity of bubble sort?",
+    "choices": { "A": "O(n)", "B": "O(n log n)", "C": "O(n^2)", "D": "O(log n)" },
+    "answer": "C",
+    "explanation": "Bubble sort uses nested loops comparing adjacent elements, resulting in O(n^2)."
+  },
+  {
+    "id": "q041",
+    "type": "mcq",
+    "topic": "Sorting",
+    "difficulty": "easy",
+    "question": "Which of these sorting algorithms is stable?",
+    "choices": { "A": "Quicksort", "B": "Heap sort", "C": "Merge sort", "D": "Selection sort" },
+    "answer": "C",
+    "explanation": "Merge sort preserves the relative order of equal elements, making it stable."
+  },
+  {
+    "id": "q042",
+    "type": "mcq",
+    "topic": "Sorting",
+    "difficulty": "easy",
+    "question": "What sorting algorithm does Python's built-in sort() use?",
+    "choices": { "A": "Quicksort", "B": "Merge sort", "C": "Timsort", "D": "Heap sort" },
+    "answer": "C",
+    "explanation": "Python uses Timsort, a hybrid of merge sort and insertion sort, optimized for real-world data."
+  },
+  {
+    "id": "q043",
+    "type": "mcq",
+    "topic": "Trees",
+    "difficulty": "easy",
+    "question": "What is the root of a tree?",
+    "choices": { "A": "The deepest node", "B": "The topmost node with no parent", "C": "Any leaf node", "D": "The node with the most children" },
+    "answer": "B",
+    "explanation": "The root is the single topmost node that has no parent."
+  },
+  {
+    "id": "q044",
+    "type": "mcq",
+    "topic": "Trees",
+    "difficulty": "easy",
+    "question": "What is a leaf node?",
+    "choices": { "A": "A node with two children", "B": "The root node", "C": "A node with no children", "D": "A node with one child" },
+    "answer": "C",
+    "explanation": "A leaf node is a node at the bottom of the tree with no children."
+  },
+  {
+    "id": "q045",
+    "type": "mcq",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What does Big O notation describe?",
+    "choices": { "A": "Exact runtime in seconds", "B": "Best-case performance", "C": "Upper bound on growth rate", "D": "Memory usage only" },
+    "answer": "C",
+    "explanation": "Big O describes the upper bound of how an algorithm's time or space scales with input size."
+  },
+  {
+    "id": "q046",
+    "type": "mcq",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "Which is faster for large n: O(n) or O(n^2)?",
+    "choices": { "A": "O(n)", "B": "O(n^2)", "C": "They are the same", "D": "It depends on the constant" },
+    "answer": "A",
+    "explanation": "O(n) grows linearly while O(n^2) grows quadratically. For large n, O(n) is much faster."
+  },
+  {
+    "id": "q047",
+    "type": "mcq",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the time complexity of a single for loop over n elements?",
+    "choices": { "A": "O(1)", "B": "O(log n)", "C": "O(n)", "D": "O(n^2)" },
+    "answer": "C",
+    "explanation": "A single loop that visits each element once is O(n)."
+  },
+  {
+    "id": "q048",
+    "type": "mcq",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the time complexity of two nested for loops, each over n elements?",
+    "choices": { "A": "O(n)", "B": "O(n log n)", "C": "O(n^2)", "D": "O(2n)" },
+    "answer": "C",
+    "explanation": "Two nested loops each running n times gives n * n = O(n^2)."
+  },
+  {
+    "id": "q049",
+    "type": "mcq",
+    "topic": "Binary Search",
+    "difficulty": "easy",
+    "question": "What is required for binary search to work?",
+    "choices": { "A": "The array must be sorted", "B": "The array must have unique elements", "C": "The array must be small", "D": "The array must contain integers" },
+    "answer": "A",
+    "explanation": "Binary search requires a sorted array so it can eliminate half the elements at each step."
+  },
+  {
+    "id": "q050",
+    "type": "mcq",
+    "topic": "Recursion",
+    "difficulty": "easy",
+    "question": "What must every recursive function have to avoid infinite recursion?",
+    "choices": { "A": "A loop", "B": "A base case", "C": "A global variable", "D": "A return type" },
+    "answer": "B",
+    "explanation": "A base case is a condition that stops the recursion without making another recursive call."
+  },
+  {
+    "id": "q051",
+    "type": "mcq",
+    "topic": "Recursion",
+    "difficulty": "easy",
+    "question": "What data structure does the system use to manage recursive calls?",
+    "choices": { "A": "Queue", "B": "Heap", "C": "Call stack", "D": "Hash map" },
+    "answer": "C",
+    "explanation": "Each recursive call is pushed onto the call stack and popped when it returns."
+  },
+
+  {
+    "id": "q052",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(3 * 'ab')",
+    "answer": "ababab",
+    "explanation": "Multiplying a string by an integer repeats it that many times."
+  },
+  {
+    "id": "q053",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(10 // 3)",
+    "answer": "3",
+    "explanation": "The // operator performs integer (floor) division. 10 / 3 = 3.33, floored to 3."
+  },
+  {
+    "id": "q054",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(10 % 3)",
+    "answer": "1",
+    "explanation": "The % operator returns the remainder. 10 divided by 3 leaves a remainder of 1."
+  },
+  {
+    "id": "q055",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print([1, 2, 3] + [4, 5])",
+    "answer": "[1, 2, 3, 4, 5]",
+    "explanation": "The + operator concatenates two lists into a new list."
+  },
+  {
+    "id": "q056",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  x = 'hello'\n  print(x[1])",
+    "answer": "e",
+    "explanation": "String indexing is zero-based. Index 1 is the second character, 'e'."
+  },
+  {
+    "id": "q057",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(len('hello'))",
+    "answer": "5",
+    "explanation": "The string 'hello' has 5 characters."
+  },
+  {
+    "id": "q058",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(max([3, 1, 4, 1, 5]))",
+    "answer": "5",
+    "explanation": "max() returns the largest element in the list."
+  },
+  {
+    "id": "q059",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(min([3, 1, 4, 1, 5]))",
+    "answer": "1",
+    "explanation": "min() returns the smallest element in the list."
+  },
+  {
+    "id": "q060",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(sum([1, 2, 3, 4]))",
+    "answer": "10",
+    "explanation": "sum() adds all elements: 1 + 2 + 3 + 4 = 10."
+  },
+  {
+    "id": "q061",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(sorted([3, 1, 2]))",
+    "answer": "[1, 2, 3]",
+    "explanation": "sorted() returns a new list in ascending order."
+  },
+  {
+    "id": "q062",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print('hello'.upper())",
+    "answer": "HELLO",
+    "explanation": "The upper() method converts all characters to uppercase."
+  },
+  {
+    "id": "q063",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(' hello '.strip())",
+    "answer": "hello",
+    "explanation": "strip() removes leading and trailing whitespace."
+  },
+  {
+    "id": "q064",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print('a,b,c'.split(','))",
+    "answer": "['a', 'b', 'c']",
+    "explanation": "split(',') breaks the string at each comma and returns a list of substrings."
+  },
+  {
+    "id": "q065",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print('-'.join(['a', 'b', 'c']))",
+    "answer": "a-b-c",
+    "explanation": "join() concatenates the list elements with '-' as the separator."
+  },
+  {
+    "id": "q066",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  d = {'a': 1, 'b': 2}\n  print(d.get('c', 0))",
+    "answer": "0",
+    "explanation": "get() returns the default value (0) when the key 'c' is not found."
+  },
+  {
+    "id": "q067",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(list(range(5)))",
+    "answer": "[0, 1, 2, 3, 4]",
+    "explanation": "range(5) generates numbers 0 through 4."
+  },
+  {
+    "id": "q068",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(2 ** 3)",
+    "answer": "8",
+    "explanation": "** is the exponentiation operator. 2 raised to the 3rd power is 8."
+  },
+  {
+    "id": "q069",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print([x * 2 for x in range(4)])",
+    "answer": "[0, 2, 4, 6]",
+    "explanation": "The list comprehension doubles each value in range(4): 0*2, 1*2, 2*2, 3*2."
+  },
+  {
+    "id": "q070",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print('abc' in 'abcdef')",
+    "answer": "True",
+    "explanation": "The 'in' operator checks if 'abc' is a substring of 'abcdef'."
+  },
+  {
+    "id": "q071",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print([1, 2, 3][1:])",
+    "answer": "[2, 3]",
+    "explanation": "Slicing from index 1 onward returns all elements starting from the second one."
+  },
+  {
+    "id": "q072",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(bool(0))",
+    "answer": "False",
+    "explanation": "Zero is falsy in Python. bool(0) returns False."
+  },
+  {
+    "id": "q073",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(bool('hello'))",
+    "answer": "True",
+    "explanation": "Non-empty strings are truthy in Python."
+  },
+  {
+    "id": "q074",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(list({1, 2, 2, 3}))",
+    "answer": "[1, 2, 3]",
+    "explanation": "Sets remove duplicates. Converting back to a list gives [1, 2, 3]."
+  },
+  {
+    "id": "q075",
+    "type": "predict_output",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  print(abs(-7))",
+    "answer": "7",
+    "explanation": "abs() returns the absolute value, removing the negative sign."
+  },
+
+  {
+    "id": "q076",
+    "type": "fill_code",
+    "topic": "Arrays",
+    "difficulty": "easy",
+    "question": "Append a value to a list:\n\n  nums.________(5)",
+    "answer": ["append"],
+    "explanation": "list.append() adds an element to the end of the list in O(1) amortized time."
+  },
+  {
+    "id": "q077",
+    "type": "fill_code",
+    "topic": "Arrays",
+    "difficulty": "easy",
+    "question": "Get the length of a list:\n\n  size = ________(nums)",
+    "answer": ["len"],
+    "explanation": "len() returns the number of elements in a container."
+  },
+  {
+    "id": "q078",
+    "type": "fill_code",
+    "topic": "Arrays",
+    "difficulty": "easy",
+    "question": "Sort a list in place:\n\n  nums.________()",
+    "answer": ["sort"],
+    "explanation": "list.sort() sorts the list in-place in ascending order."
+  },
+  {
+    "id": "q079",
+    "type": "fill_code",
+    "topic": "Arrays",
+    "difficulty": "easy",
+    "question": "Reverse a list in place:\n\n  nums.________()",
+    "answer": ["reverse"],
+    "explanation": "list.reverse() reverses the list in-place."
+  },
+  {
+    "id": "q080",
+    "type": "fill_code",
+    "topic": "Strings",
+    "difficulty": "easy",
+    "question": "Check if a string is a palindrome:\n\n  if s == s[________]:",
+    "answer": ["::-1"],
+    "explanation": "s[::-1] creates a reversed copy of the string for comparison."
+  },
+  {
+    "id": "q081",
+    "type": "fill_code",
+    "topic": "Strings",
+    "difficulty": "easy",
+    "question": "Check if a character is a letter or digit:\n\n  if c.________():",
+    "answer": ["isalnum"],
+    "explanation": "str.isalnum() returns True if the character is alphanumeric (letter or digit)."
+  },
+  {
+    "id": "q082",
+    "type": "fill_code",
+    "topic": "Hash Map",
+    "difficulty": "easy",
+    "question": "Get a value with a default if key is missing:\n\n  count = d.________(key, 0)",
+    "answer": ["get"],
+    "explanation": "dict.get(key, default) returns the value for key, or default if the key doesn't exist."
+  },
+  {
+    "id": "q083",
+    "type": "fill_code",
+    "topic": "Sets",
+    "difficulty": "easy",
+    "question": "Add an element to a set:\n\n  seen.________(x)",
+    "answer": ["add"],
+    "explanation": "set.add() inserts an element into the set in average O(1) time."
+  },
+  {
+    "id": "q084",
+    "type": "fill_code",
+    "topic": "Queue",
+    "difficulty": "easy",
+    "question": "Remove from the left end of a deque:\n\n  val = q.________()",
+    "answer": ["popleft"],
+    "explanation": "deque.popleft() removes and returns the leftmost element in O(1) time."
+  },
+  {
+    "id": "q085",
+    "type": "fill_code",
+    "topic": "Stack",
+    "difficulty": "easy",
+    "question": "Check the top of a stack without removing it:\n\n  top = stack[________]",
+    "answer": ["-1"],
+    "explanation": "Index -1 accesses the last element, which is the top of a stack implemented as a list."
+  },
+  {
+    "id": "q086",
+    "type": "fill_code",
+    "topic": "Binary Search",
+    "difficulty": "easy",
+    "question": "Move the left pointer when the target is greater than mid:\n\n  low = mid ________ 1",
+    "answer": ["+"],
+    "explanation": "When target > arr[mid], the target is in the right half, so we set low = mid + 1."
+  },
+  {
+    "id": "q087",
+    "type": "fill_code",
+    "topic": "Binary Search",
+    "difficulty": "easy",
+    "question": "Move the right pointer when the target is less than mid:\n\n  high = mid ________ 1",
+    "answer": ["-"],
+    "explanation": "When target < arr[mid], the target is in the left half, so we set high = mid - 1."
+  },
+  {
+    "id": "q088",
+    "type": "fill_code",
+    "topic": "Recursion",
+    "difficulty": "easy",
+    "question": "Base case for factorial:\n\n  if n ________ 1:\n      return 1",
+    "answer": ["<=", "=="],
+    "explanation": "The factorial base case is when n is 0 or 1, where the result is 1."
+  },
+  {
+    "id": "q089",
+    "type": "fill_code",
+    "topic": "Trees",
+    "difficulty": "easy",
+    "question": "Check if a tree node is a leaf:\n\n  if node.left is None and node.________ is None:",
+    "answer": ["right"],
+    "explanation": "A leaf node has no left and no right child."
+  },
+  {
+    "id": "q090",
+    "type": "fill_code",
+    "topic": "Sorting",
+    "difficulty": "easy",
+    "question": "Swap two elements in a list:\n\n  nums[i], nums[j] = nums[j], nums[________]",
+    "answer": ["i"],
+    "explanation": "Python tuple unpacking allows swapping in one line: a, b = b, a."
+  },
+  {
+    "id": "q091",
+    "type": "fill_code",
+    "topic": "Two Pointers",
+    "difficulty": "easy",
+    "question": "Initialize two pointers at opposite ends:\n\n  left = 0\n  right = len(nums) ________ 1",
+    "answer": ["-"],
+    "explanation": "The right pointer starts at the last index, which is len(nums) - 1."
+  },
+  {
+    "id": "q092",
+    "type": "fill_code",
+    "topic": "Graphs",
+    "difficulty": "easy",
+    "question": "Mark a node as visited:\n\n  ________.add(node)",
+    "answer": ["visited", "seen"],
+    "explanation": "A set called 'visited' or 'seen' tracks which nodes have already been explored."
+  },
+
+  {
+    "id": "q093",
+    "type": "short_answer",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the time complexity of iterating through a list of n elements?",
+    "answer": ["O(n)"],
+    "explanation": "Visiting each element once takes O(n) time."
+  },
+  {
+    "id": "q094",
+    "type": "short_answer",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the time complexity of accessing a dictionary value by key?",
+    "answer": ["O(1)"],
+    "explanation": "Dictionary lookup by key is average O(1) thanks to hashing."
+  },
+  {
+    "id": "q095",
+    "type": "short_answer",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the time complexity of checking if an element is in an unsorted list?",
+    "answer": ["O(n)"],
+    "explanation": "You may have to check every element, so worst case is O(n)."
+  },
+  {
+    "id": "q096",
+    "type": "short_answer",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "What is the time complexity of Python's sorted() function?",
+    "answer": ["O(n log n)", "O(nlogn)"],
+    "explanation": "Python's sorted() uses Timsort which runs in O(n log n)."
+  },
+  {
+    "id": "q097",
+    "type": "short_answer",
+    "topic": "Runtime",
+    "difficulty": "easy",
+    "question": "If you double the input size and the runtime quadruples, what is the likely Big O?",
+    "answer": ["O(n^2)", "O(n2)"],
+    "explanation": "Quadrupling when input doubles means quadratic growth: O(n^2)."
+  },
+  {
+    "id": "q098",
+    "type": "short_answer",
+    "topic": "Data Structures",
+    "difficulty": "easy",
+    "question": "What data structure would you use to check if you've visited a node before?",
+    "answer": ["set", "hash set", "hashset"],
+    "explanation": "A set provides O(1) membership checking, ideal for tracking visited items."
+  },
+  {
+    "id": "q099",
+    "type": "short_answer",
+    "topic": "Data Structures",
+    "difficulty": "easy",
+    "question": "What data structure is Python's list implemented as under the hood?",
+    "answer": ["dynamic array", "array", "dynamic list"],
+    "explanation": "Python lists are dynamic arrays that resize automatically when capacity is exceeded."
+  },
+  {
+    "id": "q100",
+    "type": "short_answer",
+    "topic": "Data Structures",
+    "difficulty": "easy",
+    "question": "Name one data structure that supports O(1) push and O(1) pop.",
+    "answer": ["stack", "list", "array", "deque", "linked list"],
+    "explanation": "A stack (or Python list) supports O(1) push (append) and O(1) pop from the end."
+  },
+  {
+    "id": "q101",
+    "type": "short_answer",
+    "topic": "Sorting",
+    "difficulty": "easy",
+    "question": "What is the best possible time complexity for a comparison-based sort?",
+    "answer": ["O(n log n)", "O(nlogn)"],
+    "explanation": "No comparison-based sort can do better than O(n log n) in the worst case."
+  },
+  {
+    "id": "q102",
+    "type": "short_answer",
+    "topic": "Two Pointers",
+    "difficulty": "easy",
+    "question": "In the two-pointer technique on a sorted array, where do the pointers usually start?",
+    "answer": ["beginning and end", "start and end", "left and right", "both ends", "opposite ends"],
+    "explanation": "One pointer starts at the beginning (index 0) and the other at the end (index n-1)."
+  },
+  {
+    "id": "q103",
+    "type": "short_answer",
+    "topic": "Sliding Window",
+    "difficulty": "easy",
+    "question": "What technique would you use to find the maximum sum of k consecutive elements?",
+    "answer": ["sliding window", "window"],
+    "explanation": "A sliding window of size k slides across the array, adding/removing one element at a time."
+  },
+  {
+    "id": "q104",
+    "type": "short_answer",
+    "topic": "Recursion",
+    "difficulty": "easy",
+    "question": "What error does Python raise when recursion goes too deep?",
+    "answer": ["RecursionError", "recursion error", "maximum recursion depth exceeded", "stack overflow"],
+    "explanation": "Python raises RecursionError when the maximum recursion depth is exceeded (default 1000)."
+  },
+  {
+    "id": "q105",
+    "type": "short_answer",
+    "topic": "Trees",
+    "difficulty": "easy",
+    "question": "What is the maximum number of nodes at level k of a binary tree?",
+    "answer": ["2^k", "2**k"],
+    "explanation": "Each level can have at most double the previous level: level 0 has 1, level 1 has 2, level k has 2^k."
+  },
+  {
+    "id": "q106",
+    "type": "short_answer",
+    "topic": "Graphs",
+    "difficulty": "easy",
+    "question": "What do you call a graph where edges have no direction?",
+    "answer": ["undirected", "undirected graph"],
+    "explanation": "In an undirected graph, edges go both ways between connected nodes."
+  },
+  {
+    "id": "q107",
+    "type": "short_answer",
+    "topic": "Graphs",
+    "difficulty": "easy",
+    "question": "What do you call a graph where edges have a direction?",
+    "answer": ["directed", "directed graph", "digraph"],
+    "explanation": "In a directed graph, each edge has a specific direction from one node to another."
+  },
+
+  {
+    "id": "q108",
+    "type": "mcq",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does the 'in' keyword do when used with a list?",
+    "choices": { "A": "Inserts an element", "B": "Checks membership", "C": "Returns the index", "D": "Sorts the list" },
+    "answer": "B",
+    "explanation": "'in' checks if a value exists in the list, returning True or False."
+  },
+  {
+    "id": "q109",
+    "type": "mcq",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What is the index of the first element in a Python list?",
+    "choices": { "A": "1", "B": "0", "C": "-1", "D": "None" },
+    "answer": "B",
+    "explanation": "Python uses zero-based indexing. The first element is at index 0."
+  },
+  {
+    "id": "q110",
+    "type": "mcq",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What does range(3) produce?",
+    "choices": { "A": "[1, 2, 3]", "B": "[0, 1, 2]", "C": "[0, 1, 2, 3]", "D": "[1, 2]" },
+    "answer": "B",
+    "explanation": "range(3) generates 0, 1, 2 — it starts at 0 and stops before 3."
+  },
+  {
+    "id": "q111",
+    "type": "mcq",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "Which method removes the last element from a list and returns it?",
+    "choices": { "A": "remove()", "B": "delete()", "C": "pop()", "D": "discard()" },
+    "answer": "C",
+    "explanation": "list.pop() removes and returns the last element. pop(i) removes at index i."
+  },
+  {
+    "id": "q112",
+    "type": "mcq",
+    "topic": "Python Basics",
+    "difficulty": "easy",
+    "question": "What is the difference between '==' and 'is' in Python?",
+    "choices": { "A": "No difference", "B": "'==' checks value, 'is' checks identity", "C": "'is' checks value, '==' checks identity", "D": "'is' only works with strings" },
+    "answer": "B",
+    "explanation": "'==' compares values for equality. 'is' checks if two variables point to the same object in memory."
+  },
+  {
+    "id": "q113",
+    "type": "mcq",
+    "topic": "Data Structures",
+    "difficulty": "easy",
+    "question": "Which of these allows duplicate values?",
+    "choices": { "A": "set", "B": "dict keys", "C": "list", "D": "frozenset" },
+    "answer": "C",
+    "explanation": "Lists allow duplicate values. Sets and dictionary keys do not."
+  },
+  {
+    "id": "q114",
+    "type": "mcq",
+    "topic": "Sorting",
+    "difficulty": "easy",
+    "question": "What is the best-case time complexity of insertion sort?",
+    "choices": { "A": "O(1)", "B": "O(n)", "C": "O(n log n)", "D": "O(n^2)" },
+    "answer": "B",
+    "explanation": "On an already-sorted array, insertion sort only makes one comparison per element: O(n)."
+  },
+  {
+    "id": "q115",
+    "type": "mcq",
+    "topic": "Two Pointers",
+    "difficulty": "easy",
+    "question": "The two-pointer technique is most useful on what kind of input?",
+    "choices": { "A": "Unsorted arrays", "B": "Sorted arrays or linked lists", "C": "Hash maps", "D": "Trees" },
+    "answer": "B",
+    "explanation": "Two pointers are most effective on sorted arrays or linked lists where pointer movement is predictable."
+  }
+]
