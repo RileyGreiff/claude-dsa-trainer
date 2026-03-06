@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "prompt_frequency": 3,
+  "allow_skip": true,
+  "max_retries": 2,
+  "anthropic_api_key": ""
+}
