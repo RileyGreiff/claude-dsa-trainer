@@ -106,7 +106,7 @@ Uses Claude Haiku to keep costs minimal.
 
 ## Question bank
 
-115 questions across 4 types:
+140 questions across 4 types:
 
 | Type | Description | Example |
 |------|-------------|---------|
@@ -115,7 +115,7 @@ Uses Claude Haiku to keep costs minimal.
 | **predict_output** | Predict what Python prints | `print([1,2,3][-1])` |
 | **short_answer** | Short text answer | "What is the time complexity of merge sort?" |
 
-Topics covered: Arrays, Strings, Hash Maps, Sets, Stacks, Queues, Linked Lists, Trees, Graphs, Binary Search, Sorting, Recursion, Two Pointers, Sliding Window, Big O / Runtime.
+Topics covered: Arrays, Strings, Hash Maps, Sets, Stacks, Queues, Linked Lists, Trees, Graphs, Binary Search, Sorting, Recursion, Two Pointers, Sliding Window, Big O / Runtime, and Machine Learning topics like regression, classification, clustering, evaluation, feature scaling, ensembles, and neural networks.
 
 ## Progress tracking
 

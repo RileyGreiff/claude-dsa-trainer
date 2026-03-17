@@ -1080,5 +1080,238 @@
     "choices": { "A": "Unsorted arrays", "B": "Sorted arrays or linked lists", "C": "Hash maps", "D": "Trees" },
     "answer": "B",
     "explanation": "Two pointers are most effective on sorted arrays or linked lists where pointer movement is predictable."
+  },
+  {
+    "id": "q116",
+    "type": "mcq",
+    "topic": "Machine Learning",
+    "difficulty": "easy",
+    "question": "What type of learning uses labeled input-output examples?",
+    "choices": { "A": "Supervised learning", "B": "Unsupervised learning", "C": "Reinforcement learning", "D": "Self-play" },
+    "answer": "A",
+    "explanation": "Supervised learning trains on examples where the correct target label or value is known."
+  },
+  {
+    "id": "q117",
+    "type": "mcq",
+    "topic": "Model Evaluation",
+    "difficulty": "medium",
+    "question": "If false negatives are especially costly, which metric should you prioritize?",
+    "choices": { "A": "Recall", "B": "Precision", "C": "Accuracy", "D": "Variance" },
+    "answer": "A",
+    "explanation": "Recall measures how many actual positives the model successfully finds, so it matters when missing positives is expensive."
+  },
+  {
+    "id": "q118",
+    "type": "mcq",
+    "topic": "Linear Regression",
+    "difficulty": "easy",
+    "question": "Which loss function is most commonly minimized in ordinary linear regression?",
+    "choices": { "A": "Cross-entropy loss", "B": "Mean squared error", "C": "Hinge loss", "D": "0-1 loss" },
+    "answer": "B",
+    "explanation": "Linear regression typically fits parameters by minimizing mean squared error between predictions and targets."
+  },
+  {
+    "id": "q119",
+    "type": "mcq",
+    "topic": "Classification",
+    "difficulty": "easy",
+    "question": "What does logistic regression typically output before applying a class threshold?",
+    "choices": { "A": "A cluster index", "B": "A probability", "C": "A distance matrix", "D": "A tree depth" },
+    "answer": "B",
+    "explanation": "Logistic regression outputs a value between 0 and 1 that is commonly interpreted as a class probability."
+  },
+  {
+    "id": "q120",
+    "type": "mcq",
+    "topic": "Regularization",
+    "difficulty": "medium",
+    "question": "Which regularization method tends to drive some weights exactly to zero?",
+    "choices": { "A": "L1 regularization", "B": "L2 regularization", "C": "Dropout", "D": "Early stopping" },
+    "answer": "A",
+    "explanation": "L1 regularization encourages sparsity, which can shrink some coefficients all the way to zero."
+  },
+  {
+    "id": "q121",
+    "type": "mcq",
+    "topic": "Ensembles",
+    "difficulty": "medium",
+    "question": "What is a random forest primarily made of?",
+    "choices": { "A": "Many decision trees", "B": "A single deep neural network", "C": "Several SVM kernels", "D": "A chain of logistic regressions" },
+    "answer": "A",
+    "explanation": "A random forest combines the predictions of many decision trees to improve robustness and reduce overfitting."
+  },
+  {
+    "id": "q122",
+    "type": "mcq",
+    "topic": "Clustering",
+    "difficulty": "easy",
+    "question": "What must you usually choose before running k-means clustering?",
+    "choices": { "A": "The learning rate", "B": "The number of clusters k", "C": "The activation function", "D": "The test set size" },
+    "answer": "B",
+    "explanation": "k-means requires you to specify the number of clusters in advance."
+  },
+  {
+    "id": "q123",
+    "type": "mcq",
+    "topic": "Dimensionality Reduction",
+    "difficulty": "medium",
+    "question": "What does PCA try to find?",
+    "choices": { "A": "The shortest path between classes", "B": "Directions of maximum variance", "C": "The largest decision tree", "D": "The minimum batch size" },
+    "answer": "B",
+    "explanation": "Principal Component Analysis finds orthogonal directions that capture as much variance in the data as possible."
+  },
+  {
+    "id": "q124",
+    "type": "fill_code",
+    "topic": "Gradient Descent",
+    "difficulty": "easy",
+    "question": "Complete the update step:\n\n  w = w - lr * ________",
+    "answer": ["grad", "gradient", "dw"],
+    "explanation": "Gradient descent updates a parameter by subtracting the learning rate times the gradient."
+  },
+  {
+    "id": "q125",
+    "type": "fill_code",
+    "topic": "Classification",
+    "difficulty": "easy",
+    "question": "Convert a probability into a class label:\n\n  y_pred = 1 if y_prob >= 0.5 else ________",
+    "answer": ["0"],
+    "explanation": "A common binary classification threshold predicts class 1 for probabilities at least 0.5, otherwise class 0."
+  },
+  {
+    "id": "q126",
+    "type": "fill_code",
+    "topic": "Feature Scaling",
+    "difficulty": "easy",
+    "question": "Complete z-score standardization:\n\n  x_scaled = (x - mean) / ________",
+    "answer": ["std", "standard_deviation", "sigma"],
+    "explanation": "Standardization subtracts the mean and divides by the standard deviation."
+  },
+  {
+    "id": "q127",
+    "type": "fill_code",
+    "topic": "Train/Test Split",
+    "difficulty": "easy",
+    "question": "Fill in the slice for the test set:\n\n  X_train, X_test = X[:split], X[________:]",
+    "answer": ["split"],
+    "explanation": "A simple split uses everything before the split index for training and everything from that index onward for testing."
+  },
+  {
+    "id": "q128",
+    "type": "fill_code",
+    "topic": "k-NN",
+    "difficulty": "easy",
+    "question": "Keep the k closest distances:\n\n  neighbors = distances[:________]",
+    "answer": ["k"],
+    "explanation": "k-nearest neighbors selects the k closest examples."
+  },
+  {
+    "id": "q129",
+    "type": "fill_code",
+    "topic": "Neural Networks",
+    "difficulty": "easy",
+    "question": "Complete the ReLU expression:\n\n  relu = max(0, ________)",
+    "answer": ["x", "z"],
+    "explanation": "ReLU returns the input when it is positive and 0 otherwise."
+  },
+  {
+    "id": "q130",
+    "type": "predict_output",
+    "topic": "Model Evaluation",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  y_true = [1, 0, 1, 1]\n  y_pred = [1, 1, 1, 0]\n  correct = sum(int(a == b) for a, b in zip(y_true, y_pred))\n  print(correct)",
+    "answer": "2",
+    "explanation": "The pairs match at positions 0 and 2, so there are 2 correct predictions."
+  },
+  {
+    "id": "q131",
+    "type": "predict_output",
+    "topic": "Classification",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  probs = [0.2, 0.8, 0.49]\n  preds = [1 if p >= 0.5 else 0 for p in probs]\n  print(preds)",
+    "answer": "[0, 1, 0]",
+    "explanation": "Only 0.8 is at least 0.5, so the predicted labels are [0, 1, 0]."
+  },
+  {
+    "id": "q132",
+    "type": "predict_output",
+    "topic": "Gradient Descent",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  w = 2.0\n  grad = 0.5\n  lr = 0.1\n  w = w - lr * grad\n  print(round(w, 2))",
+    "answer": "1.95",
+    "explanation": "The update subtracts 0.1 * 0.5 = 0.05 from 2.0, leaving 1.95."
+  },
+  {
+    "id": "q133",
+    "type": "predict_output",
+    "topic": "Clustering",
+    "difficulty": "medium",
+    "question": "What does this print?\n\n  p1 = (1, 2)\n  p2 = (4, 6)\n  dist_sq = (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2\n  print(dist_sq)",
+    "answer": "25",
+    "explanation": "The squared distance is (1 - 4)^2 + (2 - 6)^2 = 9 + 16 = 25."
+  },
+  {
+    "id": "q134",
+    "type": "predict_output",
+    "topic": "Classification",
+    "difficulty": "easy",
+    "question": "What does this print?\n\n  scores = [0.1, 0.7, 0.2]\n  print(scores.index(max(scores)))",
+    "answer": "1",
+    "explanation": "The largest score is 0.7, which appears at index 1."
+  },
+  {
+    "id": "q135",
+    "type": "short_answer",
+    "topic": "Generalization",
+    "difficulty": "easy",
+    "question": "What do you call a model that performs well on training data but poorly on unseen data?",
+    "answer": ["overfitting", "overfit"],
+    "explanation": "Overfitting means the model has learned the training data too specifically and does not generalize well."
+  },
+  {
+    "id": "q136",
+    "type": "short_answer",
+    "topic": "Feature Engineering",
+    "difficulty": "easy",
+    "question": "What do you call an input variable used by a machine learning model?",
+    "answer": ["feature", "input feature", "predictor", "variable"],
+    "explanation": "A feature is an input variable the model uses to make predictions."
+  },
+  {
+    "id": "q137",
+    "type": "short_answer",
+    "topic": "Classification",
+    "difficulty": "easy",
+    "question": "Which algorithm commonly uses the sigmoid function for binary classification?",
+    "answer": ["logistic regression", "logistic"],
+    "explanation": "Logistic regression uses the sigmoid function to map a linear score to a probability."
+  },
+  {
+    "id": "q138",
+    "type": "short_answer",
+    "topic": "Model Evaluation",
+    "difficulty": "medium",
+    "question": "What metric is the proportion of predicted positives that are actually positive?",
+    "answer": ["precision"],
+    "explanation": "Precision measures how accurate the model is when it predicts the positive class."
+  },
+  {
+    "id": "q139",
+    "type": "short_answer",
+    "topic": "Validation",
+    "difficulty": "medium",
+    "question": "What technique repeatedly splits data into train and validation folds to estimate model performance?",
+    "answer": ["cross validation", "cross-validation", "k-fold cross validation", "k fold cross validation", "k-fold"],
+    "explanation": "Cross-validation repeatedly evaluates the model on different train/validation splits for a more stable performance estimate."
+  },
+  {
+    "id": "q140",
+    "type": "short_answer",
+    "topic": "Clustering",
+    "difficulty": "easy",
+    "question": "What unsupervised algorithm groups points by assigning them to the nearest centroid?",
+    "answer": ["k-means", "k means", "kmeans"],
+    "explanation": "k-means assigns each point to the nearest centroid and then updates centroids iteratively."
   }
 ]
