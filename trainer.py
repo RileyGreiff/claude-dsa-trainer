@@ -217,7 +217,7 @@ def main():
 
     # Show header
     prompt_num = progress["prompt_count"]
-    print(f"\n  Prompt #{prompt_num} triggered a quick coding rep.")
+    print(f"\n  Prompt #{prompt_num} triggered a quick ML rep.")
 
     # Select and run a question
     question = select_question(questions, progress)
