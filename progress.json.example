@@ -3,5 +3,11 @@
   "total_answered": 0,
   "total_correct": 0,
   "recent_ids": [],
-  "questions": {}
+  "questions": {},
+  "interview": {
+    "cards_seen": 0,
+    "recent_ids": [],
+    "questions": {},
+    "cycle_seen": []
+  }
 }

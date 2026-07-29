@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from utils import interview
 from utils.normalize import normalize_text
 from utils.scoring import check_answer
 from utils.selector import select_question, RECENT_WINDOW
@@ -12,7 +13,18 @@ from utils.selector import select_question, RECENT_WINDOW
 BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "config.json"
 QUESTIONS_PATH = BASE_DIR / "question_bank.json"
+INTERVIEW_PATH = BASE_DIR / "interview_bank.json"
 PROGRESS_PATH = BASE_DIR / "progress.json"
+
+DEFAULT_INTERVIEW_CARDS = 5
+
+# The hook opens a fresh console, which on Windows is often a legacy codepage
+# that can't encode characters like em dashes. Both banks are ASCII, but degrade
+# rather than crash if a stray character ever slips in.
+try:
+    sys.stdout.reconfigure(errors="replace")
+except (AttributeError, OSError):
+    pass
 
 
 def has_api_key(config):
@@ -22,14 +34,6 @@ def has_api_key(config):
 
 def ask_followup(question, config):
     """Let the user ask follow-up questions about the topic using Claude API."""
-    try:
-        import anthropic
-    except ImportError:
-        print("  (Install the anthropic package to enable follow-ups: pip install anthropic)\n")
-        return
-
-    client = anthropic.Anthropic(api_key=config["anthropic_api_key"])
-
     context = f"Topic: {question['topic']}\n"
     context += f"Question: {question['question']}\n"
     correct = question["answer"]
@@ -37,6 +41,33 @@ def ask_followup(question, config):
         correct = correct[0]
     context += f"Answer: {correct}\n"
     context += f"Explanation: {question['explanation']}"
+
+    followup_loop(context, config, "a concise DSA tutor")
+
+
+def ask_followup_card(card, config):
+    """Follow-up conversation about an interview card."""
+    context = f"Topic: {card['topic']}\n"
+    context += f"Interview question: {card['question']}\n"
+    context += f"Model answer: {card['answer']}\n"
+    context += "Key points: " + "; ".join(card["key_points"])
+
+    followup_loop(
+        context,
+        config,
+        "an experienced ML interviewer helping a candidate prepare",
+    )
+
+
+def followup_loop(context, config, role):
+    """Shared follow-up chat loop against the Claude API."""
+    try:
+        import anthropic
+    except ImportError:
+        print("  (Install the anthropic package to enable follow-ups: pip install anthropic)\n")
+        return
+
+    client = anthropic.Anthropic(api_key=config["anthropic_api_key"])
 
     messages = []
 
@@ -56,7 +87,7 @@ def ask_followup(question, config):
             response = client.messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=300,
-                system=f"You are a concise DSA tutor. Answer based on this context:\n\n{context}\n\nKeep answers short (2-4 sentences). Use simple language.",
+                system=f"You are {role}. Answer based on this context:\n\n{context}\n\nKeep answers short (2-4 sentences). Use simple language.",
                 messages=messages,
             )
             reply = response.content[0].text
@@ -196,6 +227,56 @@ def update_progress(progress, question_id, answered, correct):
         progress["recent_ids"] = recent[-RECENT_WINDOW:]
 
 
+def parse_card_count(argv):
+    """Read the card count following --interview, falling back to the default."""
+    try:
+        idx = argv.index("--interview")
+    except ValueError:
+        return DEFAULT_INTERVIEW_CARDS
+
+    if idx + 1 < len(argv) and argv[idx + 1].isdigit():
+        return max(1, int(argv[idx + 1]))
+    return DEFAULT_INTERVIEW_CARDS
+
+
+def run_interview(argv):
+    """Run a standalone interview prep session."""
+    config = load_json(CONFIG_PATH)
+    cards = load_json(INTERVIEW_PATH)
+    progress = load_json(PROGRESS_PATH)
+    section = interview.get_interview_progress(progress)
+
+    count = min(parse_card_count(argv), len(cards))
+    tally = {"1": 0, "2": 0, "3": 0}
+
+    print(f"\n  Interview prep: {count} card{'s' if count != 1 else ''}.")
+    print("  Read the question, answer it out loud, then reveal. 'q' to quit early.")
+
+    for i in range(1, count + 1):
+        card = select_question(cards, section)
+        interview.display_card(card, i, count)
+
+        if not interview.prompt_enter("[Enter] to reveal a strong answer: "):
+            break
+
+        interview.reveal_card(card)
+
+        rating = interview.get_rating()
+        if rating is not None:
+            tally[rating] += 1
+        interview.record_rating(section, card["id"], rating)
+        save_json(PROGRESS_PATH, progress)
+
+        if has_api_key(config):
+            ask_followup_card(card, config)
+
+        if i < count and not interview.prompt_enter("[Enter] for the next card: "):
+            break
+
+    save_json(PROGRESS_PATH, progress)
+    interview.print_summary(tally, section)
+
+
 def main():
     # Load data
     config = load_json(CONFIG_PATH)
@@ -242,5 +323,7 @@ def main():
 if __name__ == "__main__":
     if "--setup" in sys.argv:
         setup_api_key()
+    elif "--interview" in sys.argv:
+        run_interview(sys.argv)
     else:
         main()

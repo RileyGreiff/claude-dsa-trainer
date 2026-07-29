@@ -1,0 +1,957 @@
+[
+  {
+    "id": "iv001",
+    "topic": "Model Evaluation",
+    "difficulty": "easy",
+    "category": "applied",
+    "question": "Your fraud detection model has 99.5% accuracy. Your manager is thrilled. Why might you not be?",
+    "answer": "Because fraud is rare, accuracy is almost meaningless here. If 0.5% of transactions are fraudulent, a model that predicts 'not fraud' for everything scores 99.5% and catches nothing. The metric is dominated by the majority class.\n\nWhat I'd actually look at is precision and recall on the fraud class, and specifically the precision-recall curve rather than ROC-AUC, since ROC-AUC is also optimistic under heavy imbalance. Which of precision or recall matters more depends on the cost asymmetry: a missed fraud costs the chargeback amount, a false positive costs a blocked customer and a support ticket. I'd push to get rough dollar figures for both and pick an operating threshold that minimizes expected cost, not one that maximizes F1 by default.\n\nI'd also check the confusion matrix directly and look at recall within segments, because a model can look fine overall while missing an entire fraud pattern.",
+    "key_points": [
+      "Accuracy is dominated by the majority class under imbalance",
+      "Use precision/recall and PR curves; ROC-AUC is also optimistic here",
+      "Tie the threshold to the real cost asymmetry of FP vs FN",
+      "Check per-segment recall, not just the aggregate"
+    ],
+    "followups": [
+      "How would you actually choose the threshold?",
+      "When would you prefer ROC-AUC over a PR curve?",
+      "How would you handle the imbalance during training?"
+    ]
+  },
+  {
+    "id": "iv002",
+    "topic": "Data Leakage",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "What is data leakage, and can you give a concrete example of a subtle one you'd watch for?",
+    "answer": "Data leakage is when information that wouldn't be available at prediction time leaks into training, so validation scores look great and production performance collapses.\n\nThe obvious version is including a column that's a proxy for the target. The subtle versions are more interesting. One is preprocessing before splitting: if you fit a scaler or imputer on the full dataset and then split, the validation fold has already influenced the mean and variance. The fix is to fit every transform inside the training fold only, which is what a scikit-learn Pipeline inside cross-validation gives you for free.\n\nAnother is temporal leakage: randomly shuffling time-ordered data lets the model train on the future and predict the past. Another is entity leakage, where the same user appears in both train and test with near-duplicate rows, so you're measuring memorization. And a nasty one is a feature that is populated only after the outcome occurs, like 'account_closed_reason', which is null for everyone who didn't churn.\n\nMy general check: for each feature, ask when its value is actually written in the source system relative to the prediction moment.",
+    "key_points": [
+      "Leakage = information unavailable at prediction time entering training",
+      "Fit preprocessing inside the training fold only (Pipeline + CV)",
+      "Temporal leakage from random splits on time-ordered data",
+      "Group/entity leakage from duplicate rows across splits",
+      "Features populated only after the outcome is known",
+      "Audit heuristic: when is this column actually written?"
+    ],
+    "followups": [
+      "How would you split data for a time series problem?",
+      "How would you catch leakage that's already in a shipped model?",
+      "What does GroupKFold protect against?"
+    ]
+  },
+  {
+    "id": "iv003",
+    "topic": "Validation",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "How would you split data for a model that predicts next month's demand?",
+    "answer": "Not randomly. For a forecasting problem the split has to respect time, because in production you always train on the past and predict the future. A random split lets the model see future data during training and massively overstates performance.\n\nI'd use a forward-chaining or rolling-origin scheme: train on months 1 to k, validate on month k+1, then slide the window forward and repeat. That gives several validation folds while every fold preserves causal order. Scikit-learn's TimeSeriesSplit does this. I'd also hold out the most recent block entirely as a final test set and touch it once.\n\nTwo details I'd watch. First, a gap between train and validation if there's reporting lag, so I'm not assuming data I wouldn't actually have on scoring day. Second, retraining cadence should match the evaluation scheme: if I validate by retraining monthly, production should retrain monthly too, otherwise the offline estimate doesn't describe the deployed system.",
+    "key_points": [
+      "Respect temporal order; never shuffle-split time series",
+      "Rolling-origin / forward-chaining CV (TimeSeriesSplit)",
+      "Hold out the most recent block as final test",
+      "Insert a gap to mimic real data/reporting lag",
+      "Offline validation scheme should mirror production retraining cadence"
+    ],
+    "followups": [
+      "How do you handle strong seasonality in the split?",
+      "What if you also have per-store data - how does that change things?",
+      "How would you detect that the relationship has shifted over time?"
+    ]
+  },
+  {
+    "id": "iv004",
+    "topic": "Model Evaluation",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "Walk me through how you'd choose a classification threshold for a deployed model.",
+    "answer": "I'd start by rejecting 0.5 as a default - it's an artifact, not a decision. The threshold is a business choice about the tradeoff between false positives and false negatives, so I need the cost of each.\n\nConcretely: estimate the cost of a false positive and a false negative in comparable units, usually dollars or hours of human review. Then sweep the threshold over the validation set, compute expected cost at each point, and pick the minimum. If the costs genuinely can't be quantified, I fall back to a constraint the business can state - 'we can only review 200 cases a day' becomes a precision-at-k or a capacity constraint, and 'we must catch 90% of fraud' becomes a recall floor with precision maximized subject to it.\n\nTwo caveats. The model's scores should be calibrated if I'm reasoning about expected cost, otherwise the probabilities don't mean what the arithmetic assumes. And the threshold should be revisited as base rates drift, because the optimal cut moves with prevalence even when the model itself is unchanged.",
+    "key_points": [
+      "0.5 is an arbitrary default, not a decision rule",
+      "Convert FP and FN into comparable costs, sweep threshold, minimize expected cost",
+      "Otherwise use a business constraint: capacity -> precision@k, or a recall floor",
+      "Expected-cost reasoning assumes calibrated probabilities",
+      "Re-tune the threshold as base rates drift"
+    ],
+    "followups": [
+      "What does it mean for a model to be calibrated?",
+      "How would you handle different thresholds per customer segment?",
+      "What if the cost of a false negative isn't knowable?"
+    ]
+  },
+  {
+    "id": "iv005",
+    "topic": "Debugging Models",
+    "difficulty": "hard",
+    "category": "system-design",
+    "question": "Your model performs well offline but poorly in production. How do you debug it?",
+    "answer": "I'd work through the possibilities in order of how common they are, and try to localize before theorizing.\n\nFirst, training/serving skew. Is the feature computed identically in both places? This is the single most common cause - a different default for nulls, a unit mismatch, a lookup that silently returns stale values. I'd log production feature vectors and score the exact same rows offline; if the offline model gives a different score, the bug is in the feature pipeline, not the model.\n\nSecond, leakage in the offline evaluation. If offline numbers were inflated by a feature unavailable at serving time, production isn't degraded, the offline estimate was wrong. The audit is the same one I'd do for any leakage question.\n\nThird, distribution shift: compare the distribution of each feature and of the predictions between training and live traffic. A shifted input distribution or a shifted base rate both degrade performance without any code being wrong.\n\nFourth, feedback loops and selection effects - if the model's own decisions filter what data you observe, your production metrics are computed on a biased sample.\n\nThe thing I'd resist is retraining immediately. Retraining often masks a pipeline bug for a few weeks and then it comes back.",
+    "key_points": [
+      "Training/serving skew is the most common cause - verify feature parity by rescoring logged vectors",
+      "Leakage means the offline number was wrong, not that production degraded",
+      "Compare feature and prediction distributions train vs live",
+      "Feedback loops bias the data you get to observe",
+      "Localize before retraining; retraining hides pipeline bugs"
+    ],
+    "followups": [
+      "How would you instrument the system to catch this faster next time?",
+      "How do you distinguish covariate shift from concept drift?",
+      "What would you log at serving time?"
+    ]
+  },
+  {
+    "id": "iv006",
+    "topic": "Feature Engineering",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "You have a categorical feature with 50,000 distinct values, like ZIP code or product ID. How do you encode it?",
+    "answer": "One-hot is out - it explodes dimensionality and every level gets almost no data. The options I'd consider depend on the model.\n\nFor gradient-boosted trees, which is my usual default on tabular data, I'd first try native categorical handling if the library supports it - LightGBM and CatBoost both do, and CatBoost's ordered target statistics are specifically designed to avoid the leakage that naive target encoding causes.\n\nTarget encoding is the general-purpose answer: replace each level with a smoothed estimate of the target mean for that level, shrunk toward the global mean in proportion to how little data the level has. The critical detail is that it must be computed out-of-fold, otherwise each row leaks its own label into its own feature and validation is meaningless.\n\nOther options: hashing when I need bounded memory and can tolerate collisions, learned embeddings if there's a neural model in the stack, or grouping - ZIP into region, product into category - which often captures most of the signal with a fraction of the cardinality. And I'd always reserve an explicit 'unseen' bucket, since new IDs will appear in production.",
+    "key_points": [
+      "One-hot fails on high cardinality - dimensionality and sparse levels",
+      "Prefer native categorical support (LightGBM, CatBoost) for tree models",
+      "Target encoding with smoothing, computed out-of-fold to avoid leakage",
+      "Hashing for bounded memory; embeddings for neural models",
+      "Grouping into coarser levels often captures most of the signal",
+      "Always handle unseen categories explicitly"
+    ],
+    "followups": [
+      "Why exactly does in-fold target encoding leak?",
+      "How would you pick the smoothing parameter?",
+      "What breaks when a brand new product ID shows up at serving time?"
+    ]
+  },
+  {
+    "id": "iv007",
+    "topic": "Data Quality",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "How do you handle missing values? When is dropping rows acceptable?",
+    "answer": "First I'd ask why they're missing, because the mechanism determines what's safe. If values are missing completely at random, most approaches are unbiased and it's mainly a question of how much data you lose. If missingness depends on observed variables, imputation conditioned on those variables works. If it depends on the unobserved value itself - high earners declining to report income - then any imputation is biased and the missingness itself is information.\n\nThat last case is the practical one: very often missingness is signal. A null 'last_login' means the user never logged in. So my default is to impute and add an explicit is_missing indicator, letting the model decide whether the pattern matters. For tree models I sometimes skip imputation entirely, since XGBoost and LightGBM learn a default direction for nulls.\n\nDropping rows is acceptable when the missingness is small and plausibly random, or when the target itself is missing - you can't train on those. It's not acceptable when it's a large fraction, or when dropping correlates with the outcome, because that silently changes the population you're modeling.\n\nAnd whatever I choose must be fit on training data only and applied identically at serving time.",
+    "key_points": [
+      "Diagnose the mechanism first: MCAR / MAR / MNAR",
+      "Missingness is often signal - add an is_missing indicator",
+      "Tree models can handle nulls natively",
+      "Dropping is fine for small random gaps or missing targets",
+      "Dropping is dangerous when it correlates with the outcome",
+      "Fit imputation on train only; mirror it exactly at serving"
+    ],
+    "followups": [
+      "How would you test whether missingness correlates with the target?",
+      "When would you use iterative/MICE imputation?",
+      "What's the risk of mean imputation specifically?"
+    ]
+  },
+  {
+    "id": "iv008",
+    "topic": "Overfitting",
+    "difficulty": "easy",
+    "category": "conceptual",
+    "question": "How do you know a model is overfitting, and what do you do about it?",
+    "answer": "The signal is a gap: training performance much better than validation performance, and validation error that starts rising while training error keeps falling. Plotting both against training iterations or model complexity makes it obvious.\n\nThe fixes fall into a few buckets. More data is the most reliable one when it's available, including augmentation. Reduce capacity: fewer parameters, shallower trees, lower max depth. Add regularization: L1/L2 penalties, dropout for neural nets, or the tree-specific knobs like min_child_weight and subsample. Stop earlier - early stopping on a validation set is basically free. And ensembling or bagging reduces variance.\n\nOne thing I'd add: I check whether the gap actually matters. If validation performance is good enough for the use case and stable across folds, a large train/validation gap is not itself a problem - heavily overparameterized models can generalize fine. The thing I care about is validation performance and its stability, not the size of the gap for its own sake.\n\nI'd also make sure the 'overfitting' isn't really a leaky or too-small validation set producing noisy estimates.",
+    "key_points": [
+      "Diagnose via the train/validation gap and rising validation error",
+      "More/augmented data, less capacity, regularization, early stopping, ensembling",
+      "The gap alone isn't the problem - validation performance and stability are",
+      "Rule out a noisy or leaky validation set first"
+    ],
+    "followups": [
+      "How does early stopping interact with your CV scheme?",
+      "What's the difference between overfitting the training set and overfitting the validation set?",
+      "Why can very large models generalize despite huge capacity?"
+    ]
+  },
+  {
+    "id": "iv009",
+    "topic": "Regularization",
+    "difficulty": "easy",
+    "category": "conceptual",
+    "question": "Explain the difference between L1 and L2 regularization and when you'd choose each.",
+    "answer": "Both add a penalty on coefficient size to the loss, which shrinks weights and reduces variance. The difference is the shape of the penalty and therefore what the solution looks like.\n\nL2, or ridge, penalizes the sum of squared weights. It shrinks everything smoothly toward zero but rarely exactly to zero, and it handles correlated predictors gracefully by splitting weight among them. L1, or lasso, penalizes the sum of absolute values. Its constraint region has corners on the axes, which is the geometric reason solutions land exactly at zero - so it performs feature selection and produces a sparse model.\n\nPractically: I use L1 when I want a small interpretable feature set or genuinely believe most features are irrelevant. I use L2 when predictors are correlated and I mostly want stability, which is the more common situation. Elastic net combines them and is a reasonable default when there are groups of correlated features, since pure L1 tends to pick one arbitrarily from a correlated group and drop the rest.\n\nOne detail people miss: features must be scaled before either penalty is meaningful, because the penalty is on coefficient magnitude and coefficient magnitude depends on units.",
+    "key_points": [
+      "L2 shrinks smoothly, rarely to exactly zero; handles correlated features well",
+      "L1 produces exact zeros -> sparsity and feature selection",
+      "Geometric intuition: L1's constraint region has corners on the axes",
+      "Elastic net for correlated groups; L1 alone picks one arbitrarily",
+      "Scale features first - the penalty is unit-dependent"
+    ],
+    "followups": [
+      "Why does the L1 geometry produce exact zeros?",
+      "How do you choose the regularization strength?",
+      "What's the Bayesian interpretation of each penalty?"
+    ]
+  },
+  {
+    "id": "iv010",
+    "topic": "Validation",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "When does k-fold cross-validation give you a misleading estimate?",
+    "answer": "Several situations, and they're all about the independence assumption behind random folds.\n\nGrouped data: if the same user, patient, or device appears in multiple folds, the model memorizes the entity rather than learning the pattern, and CV is optimistic. GroupKFold fixes that by keeping each group entirely within one fold.\n\nTime-ordered data: random folds train on the future. You need forward-chaining instead.\n\nPreprocessing outside the loop: scaling, imputation, feature selection, or target encoding fit on the full dataset before splitting leaks validation information into training. Everything data-dependent has to be inside the fold.\n\nHeavy class imbalance with small data: some folds may contain very few positives, so the variance across folds is huge and the mean is unstable. Stratification helps.\n\nAnd the one people forget: if you use CV to pick hyperparameters and then report that same CV score as your performance estimate, it's optimistically biased because you selected on it. That needs a nested CV or a genuinely untouched holdout.",
+    "key_points": [
+      "Grouped/repeated entities across folds -> use GroupKFold",
+      "Time-ordered data -> forward chaining, not random folds",
+      "All data-dependent preprocessing must live inside the fold",
+      "Imbalance + small data -> unstable folds; stratify",
+      "Selecting hyperparameters on CV then reporting that score is biased -> nested CV or clean holdout"
+    ],
+    "followups": [
+      "How does nested cross-validation work?",
+      "How many folds would you pick and why?",
+      "What's the bias-variance tradeoff in choosing k?"
+    ]
+  },
+  {
+    "id": "iv011",
+    "topic": "ML in Production",
+    "difficulty": "hard",
+    "category": "system-design",
+    "question": "How would you monitor a model in production? What would you alert on?",
+    "answer": "I'd think in layers, because the fastest signals aren't the ones you actually care about.\n\nOperational: latency, error rate, throughput, timeouts. Standard service monitoring, and it catches outages fastest.\n\nData quality: null rates, type and range violations, cardinality changes, volume per feature. Most 'model degradation' is really an upstream pipeline change, so this layer catches the majority of real incidents.\n\nInput drift: the distribution of each feature versus a training reference, using something like population stability index or a KS test. Drift is a warning, not a failure - it tells you the world moved, not that the model is wrong.\n\nPrediction drift: the distribution of scores and the rate of positive decisions. This catches problems even when no single feature looks unusual.\n\nPerformance: the actual metric, once labels arrive. This is the one that matters and usually the most delayed, so I'd track it on whatever lag exists and use the earlier layers as leading indicators.\n\nOn alerting: page only on operational and data-quality breaks, which are actionable immediately. Drift and prediction-distribution changes go to a dashboard or a low-urgency channel, because alerting on drift produces noise people learn to ignore. I'd also segment performance metrics, since aggregate metrics hide failures in specific cohorts.",
+    "key_points": [
+      "Layers: operational -> data quality -> input drift -> prediction drift -> true performance",
+      "Most 'model' incidents are upstream data pipeline changes",
+      "Label delay makes true performance a lagging indicator",
+      "Page on operational/data-quality; dashboard drift to avoid alert fatigue",
+      "Segment metrics - aggregates hide cohort failures"
+    ],
+    "followups": [
+      "What do you do when labels arrive weeks late?",
+      "How would you set the drift threshold?",
+      "How do you monitor a model whose decisions affect future data?"
+    ]
+  },
+  {
+    "id": "iv012",
+    "topic": "ML System Design",
+    "difficulty": "hard",
+    "category": "system-design",
+    "question": "Design a recommendation system for an e-commerce homepage.",
+    "answer": "I'd start by pinning down the objective, because 'recommendations' is underspecified. Is the goal immediate conversion, long-run retention, or catalog discovery? I'd propose optimizing predicted purchase probability with guardrails on diversity and revenue, and confirm that with the business before designing anything.\n\nArchitecturally I'd use the standard two-stage pattern. Candidate generation narrows millions of items to a few hundred cheaply - collaborative filtering or a two-tower embedding model with approximate nearest neighbor lookup, unioned with simple sources like recently viewed, trending, and same-category items. Then ranking scores those few hundred with a heavier model, typically gradient-boosted trees or a neural ranker over user features, item features, and interaction history. A final layer handles business rules: dedupe, diversity, out-of-stock filtering, promoted inventory.\n\nCold start needs explicit handling on both sides. New users get popularity and context-based recommendations until there's history; new items get content-based features so they can be surfaced before accumulating interactions.\n\nFor evaluation, offline ranking metrics like NDCG and recall@k to filter candidate models, then an online A/B test on the real metric, because offline ranking metrics correlate only loosely with live engagement. I'd watch the feedback loop closely - the model shapes what users see, which shapes the next training set, so popular items get more popular. Some exploration is necessary to keep the training data from collapsing.\n\nServing: precompute embeddings and candidates in batch, keep ranking online with a feature store to guarantee train/serve consistency.",
+    "key_points": [
+      "Clarify the objective and guardrails before designing",
+      "Two-stage: cheap candidate generation -> heavier ranking -> business rules",
+      "Cold start needs a separate path for new users and new items",
+      "Offline NDCG/recall@k to filter; online A/B test for the real decision",
+      "Feedback loops entrench popularity - build in exploration",
+      "Feature store for train/serve consistency"
+    ],
+    "followups": [
+      "How would you handle the cold-start user specifically?",
+      "How do you balance exploration against short-term revenue?",
+      "What latency budget would you target and how does it constrain the design?"
+    ]
+  },
+  {
+    "id": "iv013",
+    "topic": "Model Selection",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "When would you choose gradient boosting over a random forest, and when would you choose neither?",
+    "answer": "Both are tree ensembles, but they reduce error differently. Random forests build deep, low-bias, high-variance trees independently on bootstrap samples and average them, which reduces variance. Gradient boosting builds shallow, high-bias trees sequentially, each fitting the residual errors of the current ensemble, which reduces bias.\n\nIn practice, boosting usually wins on accuracy for tabular data and it's my default. The costs are that it's sequential and slower to train, more sensitive to hyperparameters, and it can overfit if you boost too long without early stopping. Random forests are more forgiving, parallelize trivially, and give a reasonable answer with almost no tuning - which makes them a good baseline and a good choice when nobody has time to tune.\n\nI'd choose neither in a few cases. If interpretability is a hard requirement - regulated lending, for instance - a regularized logistic regression or a monotonic-constrained model may be required regardless of accuracy. If the data is text, images, or audio, a pretrained neural model will beat trees decisively. If the dataset is tiny, a simple linear model is often more stable. And if the signal is genuinely linear and extrapolation matters, trees can't extrapolate beyond the training range at all, which is disqualifying for some forecasting problems.",
+    "key_points": [
+      "RF averages independent deep trees -> variance reduction; boosting fits residuals sequentially -> bias reduction",
+      "Boosting usually wins on tabular accuracy but needs tuning and early stopping",
+      "RF is the low-effort, parallelizable baseline",
+      "Neither: hard interpretability requirements, unstructured data, tiny datasets",
+      "Trees cannot extrapolate outside the training range"
+    ],
+    "followups": [
+      "Why can't trees extrapolate?",
+      "Which boosting hyperparameters matter most?",
+      "How would you make a boosted model interpretable enough for a regulator?"
+    ]
+  },
+  {
+    "id": "iv014",
+    "topic": "Calibration",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "What does it mean for a model to be well calibrated, and when do you actually need it?",
+    "answer": "A model is calibrated if its predicted probabilities match observed frequencies: among all cases scored 0.7, about 70% should be positive. That's a different property from discrimination - a model can rank cases perfectly (AUC of 1.0) while its probabilities are systematically too high or too low, and conversely a well-calibrated model can be useless at ranking.\n\nYou need calibration whenever the probability itself enters a downstream computation. Expected-value decisions, like expected loss equals probability times exposure. Pricing and risk models. Combining model output with other signals. Anything a human reads as a probability. You don't especially need it when you only care about ranking or top-k selection - a recommender's ordering is unaffected by a monotonic distortion of scores.\n\nTo assess it I'd plot a reliability diagram - predicted probability bucketed against observed rate - and compute expected calibration error or Brier score. To fix it, Platt scaling or isotonic regression fit on a held-out set: Platt when data is limited and the distortion is roughly sigmoidal, isotonic when there's enough data since it's more flexible but overfits on small sets.\n\nWorth knowing which models tend to be miscalibrated: SVMs and boosted trees typically are, naive Bayes badly so, and neural nets are often overconfident.",
+    "key_points": [
+      "Calibration = predicted probabilities match observed frequencies",
+      "Orthogonal to discrimination/ranking (AUC)",
+      "Needed for expected-value decisions, pricing, human consumption; not for pure ranking",
+      "Assess with reliability diagrams, ECE, Brier score",
+      "Fix with Platt scaling (small data) or isotonic regression (more data)",
+      "Boosted trees, SVMs, and modern neural nets are commonly miscalibrated"
+    ],
+    "followups": [
+      "Why does class rebalancing during training break calibration?",
+      "How would you calibrate a multiclass model?",
+      "What's the difference between Brier score and log loss?"
+    ]
+  },
+  {
+    "id": "iv015",
+    "topic": "Interpretability",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "A stakeholder asks why the model rejected a specific customer. How do you answer?",
+    "answer": "I'd separate two questions that get conflated: why did the model behave this way globally, and why this particular case.\n\nFor the individual case, I'd use a local attribution method - SHAP values are my default because they're consistent and additive, so I can say 'the baseline score was 0.3, low tenure pushed it up 0.2, high income pushed it down 0.1', and the parts sum to the actual prediction. That's directly explainable to a non-technical audience and, in a lending context, maps onto adverse action reasons.\n\nFor global behavior, permutation importance or aggregated SHAP tells you which features drive the model overall, and partial dependence or ALE plots show the shape of each relationship.\n\nThe caveats I'd state honestly. These are associations in the model, not causal claims about the customer - SHAP explains the model's function, not the world. Correlated features share credit in ways that can look arbitrary. And permutation importance on correlated features evaluates the model on impossible input combinations, so it can mislead.\n\nIf explanations are a regulatory requirement rather than a nice-to-have, I'd argue for an inherently interpretable model instead - a scorecard or monotonic GBM - because post-hoc explanations of a black box are harder to defend.",
+    "key_points": [
+      "Distinguish local (this case) from global (overall behavior) explanation",
+      "SHAP for local attribution - additive, sums to the prediction",
+      "Permutation importance / PDP / ALE for global behavior",
+      "Explanations describe the model, not causal reality",
+      "Correlated features distort attribution and permutation importance",
+      "If explanation is a hard requirement, prefer an inherently interpretable model"
+    ],
+    "followups": [
+      "What's the difference between SHAP and LIME?",
+      "Why is permutation importance unreliable with correlated features?",
+      "How would you build a model that satisfies adverse-action requirements?"
+    ]
+  },
+  {
+    "id": "iv016",
+    "topic": "ML in Production",
+    "difficulty": "medium",
+    "category": "system-design",
+    "question": "How often should you retrain a model? How would you decide?",
+    "answer": "I'd let the data answer rather than picking a cadence by feel. The question is how fast performance decays, so I'd run a backtest: train on data up to time t, evaluate on t+1, t+2, t+3, and see where the metric degrades past an acceptable threshold. That decay curve gives an empirical retraining interval.\n\nThen I'd weigh that against cost. Retraining has real expense - compute, validation, review, deployment risk - so the right cadence is the longest one that keeps performance inside tolerance.\n\nThere are two triggers worth combining. Scheduled retraining on the interval the backtest suggests, which is predictable and easy to operate. Plus triggered retraining when monitoring shows performance dropping below a threshold or significant drift appears. Scheduled alone can be too slow for a sudden shift; triggered alone is unpredictable and can fire on noise.\n\nSome domains need continuous or online updating - ad click prediction, fraud where adversaries adapt deliberately. Others are stable for years. The adversarial case is worth calling out specifically: fraud models decay because attackers respond to them, which is concept drift caused by your own deployment.\n\nWhatever the cadence, retraining must be automated and validated: a new model should have to beat the incumbent on a holdout before it can be promoted, otherwise automatic retraining is a way to automatically ship regressions.",
+    "key_points": [
+      "Backtest the decay curve to find an empirical interval",
+      "Trade decay against the real cost and risk of retraining",
+      "Combine scheduled cadence with drift/performance triggers",
+      "Adversarial domains (fraud, ads) decay fastest - partly because of your own model",
+      "Gate promotion on beating the incumbent, or automation ships regressions"
+    ],
+    "followups": [
+      "How do you avoid retraining on data your own model biased?",
+      "What's your rollback plan if a retrained model is worse?",
+      "When would you use online learning instead?"
+    ]
+  },
+  {
+    "id": "iv017",
+    "topic": "Transformers",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "Explain self-attention to me. Why did transformers displace RNNs?",
+    "answer": "Self-attention lets every token look directly at every other token and decide how much each one matters. Each token is projected into a query, a key, and a value. You take the dot product of a token's query with every key to get relevance scores, scale by the square root of the key dimension, softmax them into weights, and take the weighted sum of the values. So each output position is a content-weighted mixture of the whole sequence.\n\nThe scaling by sqrt(d_k) matters: without it, dot products of high-dimensional vectors grow large, the softmax saturates, and gradients vanish. Multiple heads run this in parallel with different projections, so different heads can specialize - one tracks syntactic dependency, another coreference.\n\nWhy it displaced RNNs comes down to two things. First, parallelism: an RNN must process token t before t+1, so training is inherently sequential, while attention computes all positions at once and saturates a GPU. That's what made training on internet-scale corpora practical. Second, path length: in an RNN, information between distant tokens passes through many steps and degrades, while attention connects any two positions in one hop, so long-range dependencies survive.\n\nThe cost is that attention is quadratic in sequence length in both time and memory, which is why long-context work is largely about evading that quadratic term.",
+    "key_points": [
+      "Q/K/V: score = softmax(QK^T / sqrt(d_k)), output = weighted sum of V",
+      "sqrt(d_k) scaling prevents softmax saturation and vanishing gradients",
+      "Multiple heads learn different relationship types in parallel",
+      "Parallel training (vs sequential RNN) enabled internet-scale pretraining",
+      "Constant path length preserves long-range dependencies",
+      "Cost: quadratic time and memory in sequence length"
+    ],
+    "followups": [
+      "Why do we need positional encodings at all?",
+      "What's the difference between self-attention and cross-attention?",
+      "How do KV caches make inference faster?"
+    ]
+  },
+  {
+    "id": "iv018",
+    "topic": "LLM Applications",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "A stakeholder wants to 'train our own LLM on company data'. How do you respond?",
+    "answer": "I'd reframe it, because 'train our own' usually means 'make the model know our stuff', and pretraining from scratch is almost never the right way to get that. Pretraining costs millions and needs a data scale most companies don't have.\n\nI'd lay out the ladder in order of cost. Prompting with good context is first - often it's enough, and it's the fastest to test. Retrieval-augmented generation is next, and it's the right answer for most 'know our documents' requests: keep knowledge in a searchable store, retrieve relevant chunks at query time, and let the model reason over them. Fine-tuning comes after that, and the key point is that fine-tuning teaches form, not facts - tone, output structure, domain-specific behavior, following a narrow task reliably. It's a poor and expensive way to inject knowledge, and it bakes in a snapshot that goes stale. Continued pretraining is a distant fourth, worth it only for genuinely distinct domains with a lot of proprietary text.\n\nSo the diagnostic question I'd ask is: does the model need to know something, or behave a certain way? Knowledge means RAG. Behavior means fine-tuning. Frequently changing information means RAG regardless, because updating an index is trivial and retraining isn't.\n\nI'd also push on evaluation before anything else - without a way to measure whether the answers got better, you can't tell which rung of the ladder helped.",
+    "key_points": [
+      "Pretraining from scratch is essentially never the right answer",
+      "Ladder: prompting -> RAG -> fine-tuning -> continued pretraining",
+      "Fine-tuning teaches form/behavior; RAG supplies knowledge",
+      "Frequently changing information always favors RAG - reindexing beats retraining",
+      "Build the eval before choosing the technique"
+    ],
+    "followups": [
+      "When is fine-tuning genuinely worth it?",
+      "How would you combine RAG and fine-tuning?",
+      "What would you measure to decide if RAG is working?"
+    ]
+  },
+  {
+    "id": "iv019",
+    "topic": "RAG",
+    "difficulty": "medium",
+    "category": "system-design",
+    "question": "Walk me through a RAG pipeline end to end, and tell me where it usually breaks.",
+    "answer": "Ingestion first: documents are parsed, split into chunks, embedded, and stored in a vector index along with metadata. At query time the user's question is embedded, the index returns the top-k nearest chunks, those are inserted into the prompt as context, and the model answers from them - ideally with citations back to the source.\n\nWhere it breaks, roughly in order of how often I've seen it: retrieval, not generation. If the right chunk never gets retrieved, no amount of prompt engineering saves the answer. Common causes are chunks split mid-idea so no chunk contains a complete answer, pure semantic search missing exact keyword matches like error codes or product SKUs, and queries that are phrased nothing like the source documents.\n\nThe usual fixes: hybrid search combining BM25 with dense retrieval to get both lexical and semantic matching, a reranker over a larger candidate set, query rewriting to bridge the phrasing gap, and chunking that respects document structure with some overlap.\n\nOther failure modes: stale index after source documents change; conflicting retrieved chunks where the model silently picks one; retrieved context that's ignored in favor of parametric knowledge; and questions requiring aggregation across many documents, which top-k retrieval fundamentally can't serve.\n\nThe thing I'd insist on is evaluating retrieval separately from generation - recall@k on a labeled query set - because otherwise you can't tell which half is failing.",
+    "key_points": [
+      "Pipeline: chunk -> embed -> index -> retrieve top-k -> stuff context -> generate with citations",
+      "Most failures are retrieval failures, not generation failures",
+      "Hybrid (BM25 + dense) search, reranking, query rewriting",
+      "Chunking should respect document structure, with overlap",
+      "Aggregation-style questions don't fit top-k retrieval",
+      "Evaluate retrieval and generation separately"
+    ],
+    "followups": [
+      "How would you build the labeled set to measure recall@k?",
+      "How do you keep the index fresh?",
+      "What do you do when retrieved chunks contradict each other?"
+    ]
+  },
+  {
+    "id": "iv020",
+    "topic": "RAG",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "How would you choose a chunking strategy for RAG?",
+    "answer": "The tension is that small chunks retrieve precisely but may lack the context needed to answer, while large chunks carry context but dilute the embedding and waste tokens. A single embedding has to summarize the whole chunk, so a long chunk covering several topics ends up near nothing in particular.\n\nI'd start from document structure rather than a fixed token count. Markdown headings, sections, function definitions, Q&A pairs - natural boundaries usually beat arbitrary splits because they align with where a complete idea lives. Fixed-size splitting with overlap is the fallback when documents have no structure, and the overlap exists so an answer straddling a boundary still appears intact somewhere.\n\nA pattern I like is decoupling what you embed from what you return: embed a small, precise unit but return the surrounding parent section to the model. That gets retrieval precision and generation context at once. Contextual chunking, where you prepend a short document-level summary to each chunk before embedding, helps for the same reason - it disambiguates chunks that are meaningless standalone.\n\nMostly I'd treat it as empirical. Build a query set with known correct sources, then measure recall@k across two or three strategies. Chunking is cheap to re-run and the right answer depends heavily on the corpus, so guessing is worse than testing.",
+    "key_points": [
+      "Small chunks = precision, large chunks = context; one embedding must summarize the whole chunk",
+      "Prefer natural structural boundaries over fixed token counts",
+      "Overlap protects answers that straddle a boundary",
+      "Small-to-big: embed the precise unit, return the parent section",
+      "Contextual chunking (prepend document context) disambiguates standalone chunks",
+      "Decide empirically with recall@k on a labeled query set"
+    ],
+    "followups": [
+      "How would you chunk a large table or spreadsheet?",
+      "What chunk size would you start with for technical docs?",
+      "How does chunking interact with your reranker?"
+    ]
+  },
+  {
+    "id": "iv021",
+    "topic": "Embeddings",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "What is an embedding, and how would you evaluate whether your embedding model is good enough?",
+    "answer": "An embedding maps text into a dense vector so that semantic similarity becomes geometric proximity - similar meanings land near each other, usually measured by cosine similarity. That's what lets you search by meaning rather than exact keywords.\n\nTo evaluate one for a specific application, I wouldn't rely on public leaderboards alone. MTEB is a reasonable starting filter, but benchmark performance on general corpora often doesn't transfer to a specialized domain - legal, medical, or internal jargon behaves differently from web text.\n\nWhat I'd actually do is build a small labeled set from real queries: 100 to 200 questions paired with the documents that genuinely answer them. Then measure recall@k and MRR or NDCG for each candidate model on my own corpus. That's the number that matters, and it usually reorders the leaderboard.\n\nPractical considerations beyond quality: dimensionality drives storage and search cost; maximum sequence length constrains chunking; inference cost and latency matter if you embed at query time; and whether you can self-host may be a hard requirement for sensitive data. Switching models later means re-embedding the entire corpus, so it's worth testing properly up front.\n\nOne gotcha: many embedding models are asymmetric, trained with different prefixes for queries versus documents. Using them symmetrically quietly degrades retrieval.",
+    "key_points": [
+      "Dense vectors where semantic similarity ~ geometric proximity (cosine)",
+      "Public benchmarks (MTEB) filter candidates but don't transfer to specialized domains",
+      "Build a domain query set and measure recall@k / MRR / NDCG on your own corpus",
+      "Weigh dimensionality, max sequence length, cost, latency, self-hosting",
+      "Switching models means re-embedding everything",
+      "Respect asymmetric query/document prefixes"
+    ],
+    "followups": [
+      "Why cosine similarity rather than Euclidean distance?",
+      "When would you fine-tune an embedding model?",
+      "How do approximate nearest neighbor indexes trade accuracy for speed?"
+    ]
+  },
+  {
+    "id": "iv022",
+    "topic": "LLM Reliability",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "Why do LLMs hallucinate, and what can you actually do about it?",
+    "answer": "Structurally, an LLM is trained to produce likely continuations, not true ones. Nothing in next-token prediction distinguishes 'I know this' from 'this is the shape an answer takes'. So when the model lacks the fact, the fluent-sounding continuation is still generated confidently. Training on plausible text also means the model learns the register of authority independent of accuracy, and RLHF can make this worse by rewarding confident, helpful-sounding answers over hedged ones.\n\nMitigations, from most to least effective in my experience. Ground the model in retrieved source material and require citations - that converts an open-ended recall task into a reading comprehension task, which models are much better at. Give it an explicit escape hatch: telling the model it may answer 'I don't know' measurably reduces fabrication, because otherwise refusing isn't a likely continuation. Constrain the output format, since structured extraction hallucinates far less than free-form prose. Verify programmatically wherever the domain allows - run the generated SQL, check the cited document actually contains the claim, validate against a schema. For high-stakes flows, keep a human in the loop.\n\nWhat I'd avoid claiming is that any of this eliminates hallucination. It reduces the rate. So the design question is what happens when a wrong answer gets through - that's an architecture decision, not a prompting one.",
+    "key_points": [
+      "Next-token prediction optimizes plausibility, not truth; no internal knowledge boundary",
+      "RLHF can reward confident phrasing over calibrated uncertainty",
+      "Grounding + citations turns recall into reading comprehension",
+      "Explicitly permit 'I don't know'",
+      "Structured output hallucinates less than free-form prose",
+      "Verify programmatically; keep humans on high-stakes paths",
+      "Mitigation reduces the rate - design for the residual failures"
+    ],
+    "followups": [
+      "How would you measure hallucination rate?",
+      "Can you use the model's token probabilities as a confidence signal?",
+      "How do you detect when a citation is fabricated?"
+    ]
+  },
+  {
+    "id": "iv023",
+    "topic": "LLM Evaluation",
+    "difficulty": "hard",
+    "category": "applied",
+    "question": "How do you evaluate an LLM-powered feature? There's no single accuracy number.",
+    "answer": "I'd build a layered eval rather than looking for one metric.\n\nStart with a golden set: real inputs with known-good outputs, curated with whoever owns the domain. Even 50 to 100 well-chosen examples catch most regressions, and building it forces the team to make 'good output' explicit, which is usually the hardest part.\n\nThen pick metrics per task type. Anything with a deterministic answer - classification, extraction, routing - gets exact match or F1 and needs nothing fancy. Free-form generation is where it's hard: reference-based metrics like ROUGE and BLEU correlate poorly with quality, so I'd use LLM-as-judge with a specific rubric, scoring concrete dimensions like factual support, completeness, and format compliance rather than a vague 1-10 quality score. For RAG specifically I'd evaluate retrieval separately with recall@k, so I can tell which stage failed.\n\nLLM-as-judge needs validation itself: I'd check judge agreement against human labels on a sample before trusting it, and watch for known biases like preferring longer answers or self-preference toward its own outputs.\n\nAssertions catch a surprising amount cheaply - valid JSON, required fields present, no PII, cites a real document, within length limits. These are deterministic and belong in CI.\n\nFinally, offline evals only predict; online signals decide. Thumbs up/down, edit rate, escalation to human support, task completion. And I'd keep a regression suite from real failures, so every bug found in production becomes a permanent test case.",
+    "key_points": [
+      "Golden set of real inputs; building it forces 'good' to be defined",
+      "Deterministic tasks -> exact match/F1; free-form -> LLM-as-judge with a specific rubric",
+      "ROUGE/BLEU correlate poorly with quality for open-ended generation",
+      "Validate the judge against human labels; watch length and self-preference bias",
+      "Cheap deterministic assertions belong in CI",
+      "Online signals (edits, escalations, thumbs) are the real decision metric",
+      "Every production failure becomes a permanent regression case"
+    ],
+    "followups": [
+      "How would you detect a regression after a model version upgrade?",
+      "How do you keep the golden set from going stale?",
+      "What if two domain experts disagree about the right answer?"
+    ]
+  },
+  {
+    "id": "iv024",
+    "topic": "LLM Inference",
+    "difficulty": "easy",
+    "category": "conceptual",
+    "question": "What do temperature and top-p actually do? When would you change them?",
+    "answer": "Both shape how the next token is sampled from the model's probability distribution.\n\nTemperature rescales the logits before the softmax. Below 1 it sharpens the distribution, concentrating mass on the highest-probability tokens and making output more deterministic; above 1 it flattens the distribution, giving unlikely tokens more chance and producing more varied, riskier text. At 0 it's effectively greedy decoding, always taking the argmax.\n\nTop-p, or nucleus sampling, truncates instead of rescaling: sort tokens by probability, keep the smallest set whose cumulative probability reaches p, and sample only from that. The adaptive part is the point - when the model is confident, the nucleus is a couple of tokens; when it's uncertain, the nucleus is wide. Top-k does the same thing with a fixed count, which is worse precisely because it isn't adaptive.\n\nIn practice I use low temperature, near 0, for anything with a correct answer: extraction, classification, code, structured output, RAG answers. Higher values, 0.7 to 1.0, for brainstorming, creative writing, or generating diverse synthetic data.\n\nTwo caveats worth stating. Temperature 0 does not guarantee reproducibility in practice - batching and floating-point nondeterminism on GPUs mean identical prompts can still diverge. And tuning both temperature and top-p together tends to produce confusing interactions; I'd usually fix one and move the other.",
+    "key_points": [
+      "Temperature rescales logits: <1 sharpens, >1 flattens, 0 ~ greedy",
+      "Top-p truncates to the smallest set covering cumulative probability p - adaptive by confidence",
+      "Top-k is the non-adaptive version and generally worse",
+      "Low temp for correctness tasks; higher for creative/diverse generation",
+      "Temp 0 isn't truly deterministic in practice (batching, GPU float nondeterminism)",
+      "Tune one knob, not both"
+    ],
+    "followups": [
+      "Why isn't temperature 0 reproducible?",
+      "How would you generate diverse synthetic data without losing quality?",
+      "What are frequency and presence penalties for?"
+    ]
+  },
+  {
+    "id": "iv025",
+    "topic": "LLM Cost & Latency",
+    "difficulty": "medium",
+    "category": "system-design",
+    "question": "Your LLM feature works but costs too much and is too slow. What levers do you have?",
+    "answer": "I'd measure first - token counts in and out, latency percentiles, and cost per request broken down by call - because the bottleneck is often one prompt or one pathological input class, not the system as a whole.\n\nOn cost, the biggest lever is usually model routing: not every request needs the largest model. Classification, routing, and extraction often run fine on a small fast model, with escalation to a larger one only for hard cases. Second is prompt size - long static system prompts and oversized retrieved context are pure recurring cost, and prompt caching makes a repeated prefix dramatically cheaper, so structuring prompts with the stable part first is close to free money. Third, cache complete responses for repeated or near-duplicate queries; real traffic is more repetitive than people expect. Batching helps for offline workloads where latency doesn't matter.\n\nOn latency, streaming is the highest-leverage change because it transforms perceived speed even without touching real speed - time to first token is what users feel. Then: shorten outputs, since generation is sequential and output tokens dominate latency while input tokens dominate cost. Parallelize independent calls instead of chaining them. Collapse multi-step chains where a single well-constructed call would do - every hop adds a full round trip.\n\nI'd also check whether an LLM is needed for every step. Often a retrieval step, a regex, or a small classifier replaces a call outright, which is the cheapest and fastest option available.",
+    "key_points": [
+      "Measure tokens, latency percentiles, and per-call cost before optimizing",
+      "Route by difficulty - small model for easy cases, escalate when needed",
+      "Prompt caching with the stable prefix first; trim system prompts and context",
+      "Cache full responses for repeated queries; batch offline work",
+      "Stream to fix perceived latency; output tokens dominate latency, input dominates cost",
+      "Parallelize independent calls; collapse unnecessary chain steps",
+      "Replace LLM calls with retrieval, rules, or small classifiers where possible"
+    ],
+    "followups": [
+      "How would you build the router that decides which model to use?",
+      "What's the tradeoff of a semantic response cache?",
+      "How do you keep quality from regressing when you downgrade the model?"
+    ]
+  },
+  {
+    "id": "iv026",
+    "topic": "Tokenization",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "Why does tokenization matter in practice? Give an example of a bug it causes.",
+    "answer": "Models don't see characters, they see tokens - subword units produced by something like byte-pair encoding, which merges frequent character sequences into single units. Common words are one token, rare words split into several.\n\nThe practical consequences show up constantly. Character-level tasks fail in ways that look absurd: counting letters in a word, reversing a string, or spotting rhymes are hard because the model never sees the characters, only opaque chunks. Arithmetic suffers for the same reason, since numbers tokenize inconsistently - the digits of a long number may group in ways that don't align with place value.\n\nCost and context are affected too. Non-English text often uses several times more tokens for the same content, so the same document costs more and consumes more context in some languages than others. Code with unusual indentation or long identifiers tokenizes inefficiently.\n\nA specific bug I'd watch for: trailing whitespace in a prompt. If your prompt ends with a space, that space is usually part of the next token the model would naturally produce, so you've split a token boundary and the model behaves oddly. That's a real and well-known source of degraded completions.\n\nAnother: truncating context by characters rather than tokens, which either overflows the window or wastes it. Always count tokens with the model's actual tokenizer.",
+    "key_points": [
+      "Models see subword tokens (BPE), not characters",
+      "Character-level tasks (counting, reversing, rhyme) fail structurally",
+      "Inconsistent number tokenization hurts arithmetic",
+      "Non-English text costs more tokens for identical content",
+      "Trailing whitespace splits a natural token boundary and degrades output",
+      "Truncate by tokens using the real tokenizer, never by characters"
+    ],
+    "followups": [
+      "Why is 'how many r's in strawberry' hard for an LLM?",
+      "How would you handle a language that tokenizes inefficiently?",
+      "What changes when a model switches tokenizers?"
+    ]
+  },
+  {
+    "id": "iv027",
+    "topic": "Fine-tuning",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "What is LoRA and why is it so widely used?",
+    "answer": "LoRA is low-rank adaptation. Instead of updating all the model's weights, you freeze them and inject small trainable low-rank matrices alongside the existing ones. The insight is that the weight update needed to adapt a model to a task is empirically low-rank, so instead of learning a full d-by-d update you learn two thin matrices, d-by-r and r-by-d, with r typically 8 to 64. You're training a fraction of a percent of the parameters.\n\nThat gives several practical wins. Memory drops dramatically, because optimizer state - which is often the real constraint, not the weights themselves - scales with trainable parameters, so fine-tuning fits on far smaller hardware. Adapters are tiny, megabytes rather than gigabytes, so you can store many task-specific adapters against one base model and swap them at serving time, which is enormously cheaper than hosting many full fine-tunes. And because the base weights are frozen, catastrophic forgetting is reduced.\n\nAt inference the adapter can be merged back into the base weights, so there's no added latency once merged.\n\nThe tradeoffs: for tasks requiring genuinely large behavioral change, full fine-tuning can still do better, and rank choice is a real hyperparameter - too low underfits the adaptation. QLoRA extends this by quantizing the frozen base to 4-bit, pushing memory requirements down further.\n\nThe framing I'd keep is that LoRA changes the economics of fine-tuning, not what fine-tuning is for. It still teaches behavior, not facts.",
+    "key_points": [
+      "Freeze base weights, train low-rank matrices alongside them (r ~ 8-64)",
+      "Premise: the adaptation update is empirically low-rank",
+      "Memory win comes largely from smaller optimizer state",
+      "Tiny swappable adapters -> many tasks per base model at serving time",
+      "Mergeable at inference, so no added latency",
+      "Full fine-tuning can still win for large behavioral shifts; QLoRA adds 4-bit quantization",
+      "Still teaches behavior, not knowledge"
+    ],
+    "followups": [
+      "How would you choose the rank?",
+      "What's catastrophic forgetting and why does freezing help?",
+      "When is full fine-tuning worth the extra cost?"
+    ]
+  },
+  {
+    "id": "iv028",
+    "topic": "Model Training",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "Explain how a chat model gets from raw pretraining to something that follows instructions.",
+    "answer": "Three stages, each doing something different.\n\nPretraining is next-token prediction over an enormous corpus. This is where essentially all the knowledge and language capability comes from. The result is a model that can continue text, but it isn't trying to be helpful - prompt it with a question and a plausible continuation might be another question, because that's what documents look like.\n\nSupervised fine-tuning comes next: train on curated prompt-response pairs demonstrating the desired behavior. This teaches format and the instruction-following frame - that a question should be answered rather than continued. It's relatively small-scale compared to pretraining.\n\nThen preference tuning. The motivation is that for open-ended tasks it's much easier for humans to compare two responses than to write an ideal one. In classic RLHF you collect preference comparisons, train a reward model to predict which response humans prefer, then optimize the policy against that reward with PPO, with a KL penalty keeping it from drifting too far from the SFT model. DPO is the now-common simplification: it optimizes directly on the preference pairs with a classification-style loss, skipping the separate reward model and the RL machinery, and it's much simpler to run.\n\nThe honest caveats: preference tuning optimizes for what raters prefer, which isn't identical to what's true or good - it can encourage sycophancy and confident phrasing. And reward models are proxies, so optimizing hard against them invites reward hacking.",
+    "key_points": [
+      "Pretraining: next-token prediction; source of nearly all knowledge",
+      "SFT: curated prompt/response pairs teach the instruction-following frame",
+      "Preference tuning: comparisons are easier for humans than writing ideal answers",
+      "RLHF = reward model + PPO with a KL penalty to the SFT policy",
+      "DPO optimizes preferences directly, no separate reward model or RL loop",
+      "Rater preference != truth - sycophancy, confident phrasing, reward hacking"
+    ],
+    "followups": [
+      "Why is the KL penalty necessary in RLHF?",
+      "What's the practical tradeoff between DPO and PPO?",
+      "How would you detect sycophancy in a model?"
+    ]
+  },
+  {
+    "id": "iv029",
+    "topic": "LLM Security",
+    "difficulty": "hard",
+    "category": "system-design",
+    "question": "What is prompt injection and how do you defend against it?",
+    "answer": "Prompt injection is when untrusted content the model processes contains instructions the model follows. The root cause is architectural: instructions and data occupy the same channel, so a model reading a web page, an email, or a retrieved document can't reliably tell 'this is content to summarize' from 'this is a command to obey'.\n\nIt's worth distinguishing two cases. Direct injection is a user trying to override your system prompt - usually a policy problem. Indirect injection is the dangerous one: a malicious instruction hidden in a document, web page, or email that your agent later reads. The attacker never talks to your system directly, and the victim is your user.\n\nThe critical thing I'd say in an interview is that prompt-level defenses are not sufficient. 'Ignore any instructions in the retrieved text' helps at the margin and is bypassable. Treating it as a filtering problem is a losing game.\n\nReal defenses are architectural. Assume the model can be compromised and constrain what it can do: least privilege on tools, so the model only holds credentials for what this task needs; human confirmation for consequential or irreversible actions; and taint tracking, where content that entered from an untrusted source restricts which tools may subsequently be called. Separate the trust levels - a model handling untrusted content shouldn't be the same one holding privileged capabilities. Validate outputs against a schema instead of executing free-form model output. And watch data exfiltration paths specifically, like rendered images or links whose URLs encode stolen context.\n\nThe framing that lands well: don't ask 'can I stop the injection', ask 'what's the worst thing that happens if the model is fully attacker-controlled'.",
+    "key_points": [
+      "Root cause: instructions and data share one channel",
+      "Indirect injection (poisoned documents/pages/email) is the dangerous variant",
+      "Prompt-level defenses are bypassable and insufficient on their own",
+      "Least privilege on tools; human confirmation for consequential actions",
+      "Taint tracking: untrusted input restricts subsequent tool access",
+      "Separate trust levels; validate outputs against a schema",
+      "Close exfiltration channels (image/link URLs encoding data)",
+      "Design for 'model is attacker-controlled', not 'model resists attack'"
+    ],
+    "followups": [
+      "How would you sandbox an agent that browses the web?",
+      "What does taint tracking look like concretely?",
+      "How is this different from SQL injection?"
+    ]
+  },
+  {
+    "id": "iv030",
+    "topic": "Agents",
+    "difficulty": "hard",
+    "category": "system-design",
+    "question": "When is an agent the right architecture, and when is it overkill?",
+    "answer": "By agent I mean a model that decides its own control flow - choosing which tools to call and when to stop - as opposed to a fixed pipeline where I decide the steps.\n\nThe honest answer is that agents are right when the problem genuinely has an unpredictable number and order of steps, and wrong otherwise. If I can draw the flowchart, I should write the flowchart: it's cheaper, faster, deterministic, testable, and debuggable. A lot of production 'agents' are workflows with extra failure modes. Prompt chaining, routing, and parallel calls cover most real use cases.\n\nWhere agents earn their complexity: open-ended investigation like debugging or research, where each step depends on what the last one found; tasks with a large tool surface where enumerating paths is impractical; and cases with a strong verification signal - running tests, compiling code - because a feedback loop the agent can check itself against is what makes iteration converge rather than wander.\n\nThe costs are real. Latency and token cost multiply with the number of turns. Errors compound, since a wrong early step poisons everything after it. They're hard to test because behavior is nondeterministic. And they're hard to debug when a failure is buried ten steps deep.\n\nSo my practical rule: start with the simplest thing, add agency only where a fixed flow demonstrably fails, and always bound it - step limits, tool allowlists, and checkpoints where a human can intervene.",
+    "key_points": [
+      "Agent = model controls its own flow; workflow = you control it",
+      "If you can draw the flowchart, build the flowchart",
+      "Agents fit open-ended tasks, large tool surfaces, and strong verification signals",
+      "Verification loops (tests, compilers) are what make iteration converge",
+      "Costs: multiplied latency/tokens, compounding errors, hard to test and debug",
+      "Bound with step limits, tool allowlists, and human checkpoints"
+    ],
+    "followups": [
+      "How would you evaluate an agent's performance?",
+      "How do you stop an agent looping forever?",
+      "How would you decide the boundary between tool calls and code?"
+    ]
+  },
+  {
+    "id": "iv031",
+    "topic": "Experimentation",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "Walk me through designing an A/B test for a new checkout flow.",
+    "answer": "I'd start with the decision, not the test: what will we do differently depending on the result? That determines everything else.\n\nThen the metric. One primary metric decided in advance - conversion rate, say - because testing many metrics and reporting whichever is significant is how teams fool themselves. Alongside it, guardrail metrics that must not degrade: revenue per user, page latency, support contacts. And I'd be careful the primary metric can't be gamed by the change itself.\n\nNext, the power calculation, done before launching. Given baseline conversion, the minimum effect size worth acting on, 80% power and a 5% significance level, I can compute the sample size per arm and therefore the runtime. The minimum detectable effect should come from a business conversation - what improvement would justify shipping this? If the required runtime is implausible, that's worth knowing before running rather than after.\n\nRandomization at the user level, not the session level, so a user gets a consistent experience and observations stay independent. I'd check for interference - if users interact, or if it's a marketplace where treatment affects control through shared inventory, unit-level randomization is invalid and I'd need cluster or switchback designs.\n\nBefore trusting results: an A/A test or at least a sample ratio mismatch check, because unequal traffic split usually means a bug that invalidates everything.\n\nRun the pre-planned duration, including full weekly cycles, and don't peek and stop early - that inflates the false positive rate substantially unless using a sequential method designed for it.",
+    "key_points": [
+      "Start from the decision the test informs",
+      "One pre-registered primary metric plus guardrails",
+      "Power analysis before launch: baseline, MDE, power, alpha -> sample size and runtime",
+      "MDE comes from a business judgment about what's worth shipping",
+      "Randomize by user; watch for interference/marketplace spillover",
+      "SRM check or A/A test to catch instrumentation bugs",
+      "Run full weekly cycles; peeking inflates false positives"
+    ],
+    "followups": [
+      "What is sample ratio mismatch and why does it invalidate a test?",
+      "How would you handle a marketplace where treatment affects control?",
+      "What if you need an answer before the test is powered?"
+    ]
+  },
+  {
+    "id": "iv032",
+    "topic": "Statistics",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "Your A/B test gives p = 0.03. What does that actually mean?",
+    "answer": "It means that if the null hypothesis were true - no real difference between the variants - there'd be a 3% chance of observing an effect at least this extreme, purely from sampling noise.\n\nWhat it does not mean, and these are the common traps: it is not a 3% chance the null is true, and not a 97% chance the treatment works. That's inverting the conditional. The p-value is P(data this extreme | null true), not P(null true | data). Getting to the second requires a prior, which is the Bayesian route.\n\nIt also says nothing about effect size. With a large enough sample, a trivially small and commercially worthless difference will be highly significant. So my next question is always the confidence interval, not the p-value - if the interval on conversion lift runs from +0.1% to +4%, significance is real but the practical decision is still unclear, and that's much more informative than a single threshold.\n\nAnd it's conditional on the test being run properly. If we peeked repeatedly, tested twenty metrics, or had a sample ratio mismatch, the nominal p-value doesn't describe the actual false positive rate. p = 0.03 from a well-designed pre-registered test and p = 0.03 from the best of twenty metrics are completely different pieces of evidence.",
+    "key_points": [
+      "P(data this extreme | null true) - not P(null true | data)",
+      "Not the probability the treatment works",
+      "Says nothing about magnitude; large n makes trivial effects significant",
+      "Ask for the confidence interval and judge practical significance",
+      "Validity depends on the design - peeking and multiple testing break the nominal rate"
+    ],
+    "followups": [
+      "How would you correct for testing twenty metrics?",
+      "What would the Bayesian version of this analysis tell you?",
+      "How do you explain a non-significant result to a stakeholder who wants to ship?"
+    ]
+  },
+  {
+    "id": "iv033",
+    "topic": "Statistics",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "You ran 20 metrics on one experiment and one came back significant at p < 0.05. What do you conclude?",
+    "answer": "Essentially nothing, on its own. If all 20 nulls were true, the probability of at least one false positive at the 5% level is 1 minus 0.95 to the twentieth, which is about 64%. So a single significant result out of 20 is roughly what you'd expect from pure noise. This is the multiple comparisons problem.\n\nThe corrections available: Bonferroni divides the threshold by the number of tests, which controls the family-wise error rate but is very conservative and kills power. Benjamini-Hochberg controls the false discovery rate instead - the expected proportion of false positives among the rejections - which is usually the better tradeoff when you're screening many metrics and can tolerate some false leads.\n\nBut the more important point is procedural. The distinction that matters is whether the metric was pre-registered as primary or discovered afterward by looking. A pre-specified primary metric at p = 0.03 is evidence; the best of 20 exploratory metrics at p = 0.03 is a hypothesis. Corrections help, but the real fix is deciding the primary metric before seeing data.\n\nSo my conclusion would be: treat it as a lead, not a result. If it's important and plausible, run a confirmatory test powered specifically for that metric. If it isn't plausible enough to justify a dedicated test, it isn't strong enough to act on either.\n\nThe same logic applies to subgroup analyses, which is why 'it worked for mobile users in Canada' should be treated with real suspicion.",
+    "key_points": [
+      "~64% chance of at least one false positive across 20 independent tests at alpha=0.05",
+      "Bonferroni controls family-wise error but is conservative; Benjamini-Hochberg controls FDR",
+      "Pre-registered primary metric vs post-hoc discovery is the key distinction",
+      "Treat the finding as a hypothesis; confirm with a dedicated powered test",
+      "Subgroup analyses suffer the same problem"
+    ],
+    "followups": [
+      "When is Bonferroni the right choice over BH?",
+      "How do you handle correlated metrics?",
+      "How would you set up an experimentation platform to prevent this?"
+    ]
+  },
+  {
+    "id": "iv034",
+    "topic": "Experimentation",
+    "difficulty": "hard",
+    "category": "applied",
+    "question": "Your test shows a big lift in week one that fades by week three. What's going on?",
+    "answer": "The most likely explanation is a novelty effect: existing users notice a change, engage with it because it's new, and revert to baseline once it stops being novel. The mirror image is a primacy effect, where users familiar with the old flow perform worse initially and improve as they learn, making a genuinely good change look bad early.\n\nEither way, the lesson is that the early estimate was measuring a transient response, not the steady state. Which means stopping the test at week one - exactly when the result looks most exciting - would have produced the wrong decision.\n\nHow I'd separate the possibilities. Segment new users versus existing users: new users have no prior expectation, so they can't experience novelty, and their effect is closer to the long-run one. Plot the treatment effect by day or week rather than reading a single pooled number - a decaying curve is the signature. Check whether the fade is in adoption or in the outcome for people who adopted.\n\nI'd also rule out mundane causes before concluding novelty: a sample composition change over time, a seasonal or promotional confound, instrumentation that broke mid-test, or a bug in the treatment that surfaced under load.\n\nThe practical takeaway is to plan runtime around the metric's stabilization period, and for changes where long-run behavior is what matters, hold back a small long-term holdout to measure effects over months.",
+    "key_points": [
+      "Novelty effect (transient boost) vs primacy effect (transient penalty)",
+      "Early estimates measure a transient, not the steady state",
+      "Segment new vs existing users to isolate novelty",
+      "Plot effect over time; a decay curve is the signature",
+      "Rule out composition shifts, seasonality, and instrumentation bugs first",
+      "Use long-term holdouts when long-run behavior is the real question"
+    ],
+    "followups": [
+      "How long would you run the test instead?",
+      "How would you design a long-term holdout?",
+      "What if leadership wants to ship based on the week-one number?"
+    ]
+  },
+  {
+    "id": "iv035",
+    "topic": "Metrics",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "How would you choose the north-star metric for a product?",
+    "answer": "The criteria I'd apply: it should capture delivered user value, move in response to things the team can actually control, be measurable quickly enough to steer by, and be hard to game.\n\nThat last one does most of the work. Almost every bad metric fails on gameability. Optimize time-on-site and you reward confusing navigation. Optimize clicks and you get clickbait. Optimize tickets closed and you get tickets closed prematurely. So for any candidate I'd ask: what's the laziest way to move this number, and would that behavior be good for users? If the answer is no, the metric needs a guardrail or a replacement.\n\nI'd also prefer a metric that proxies retained value over raw volume - weekly active users who complete a core action beats registrations, because registrations can be bought and don't imply anyone got value.\n\nNo single metric survives alone, though. I'd pair the north star with guardrails that must not degrade - latency, error rate, unsubscribes, support contacts, revenue - and with a small set of input metrics the team can move directly, since a north star is usually too lagging to guide weekly work.\n\nThe last consideration is time horizon. Short-horizon metrics are easier to optimize and easier to wreck the long term with. Aggressive notifications lift weekly engagement and depress twelve-month retention. So I'd want at least one long-horizon measure in the set, even if it's slow.",
+    "key_points": [
+      "Criteria: reflects user value, movable by the team, measurable quickly, hard to game",
+      "Stress-test by asking what the laziest way to move it would be",
+      "Prefer retained-value proxies over raw volume",
+      "Pair with guardrails and with actionable input metrics",
+      "Watch the time horizon - short-term wins can damage long-term retention"
+    ],
+    "followups": [
+      "Give an example of a metric that got gamed in a company you know of",
+      "How do you handle a metric that only moves over months?",
+      "How would you decompose a north star into team-level input metrics?"
+    ]
+  },
+  {
+    "id": "iv036",
+    "topic": "Statistics",
+    "difficulty": "hard",
+    "category": "conceptual",
+    "question": "Explain Simpson's paradox and why it matters for analysis.",
+    "answer": "Simpson's paradox is when a trend that appears in every subgroup reverses when the groups are pooled. The classic case is the Berkeley admissions data: women were admitted at a lower overall rate than men, yet within most individual departments they were admitted at an equal or higher rate. The resolution was that women applied disproportionately to departments with lower admission rates overall. The aggregate comparison was confounded by department.\n\nWhy it happens: the subgroup is a confounder that affects both the grouping variable and the outcome, and pooling implicitly weights subgroups by their different sizes.\n\nWhy it matters practically: it means you cannot resolve it statistically. Both the aggregated and disaggregated numbers are arithmetically correct - the question of which one answers your question is causal, not numerical. If department choice is a mediator on the causal path you care about, aggregating is right; if it's a confounder, you must condition on it. That decision requires domain knowledge about the data-generating process, which is exactly the argument for drawing a causal diagram before analyzing.\n\nWhere I'd expect to hit it: comparing conversion rates across segments with different mixes, comparing model performance across cohorts, or reading any A/B test where randomization was broken or where traffic composition shifted mid-test. It's also why I'd always break key metrics down by major segments rather than trusting a single pooled number.",
+    "key_points": [
+      "A trend in every subgroup can reverse when pooled",
+      "Caused by a confounder that shifts both group membership and outcome, plus unequal subgroup sizes",
+      "Berkeley admissions is the canonical example",
+      "Both numbers are correct - choosing depends on causal structure, not statistics",
+      "Confounder -> condition on it; mediator -> don't",
+      "Always segment key metrics rather than trusting a pooled figure"
+    ],
+    "followups": [
+      "How do you tell a confounder from a mediator?",
+      "How could this show up in an A/B test with proper randomization?",
+      "What's a DAG and how would it help here?"
+    ]
+  },
+  {
+    "id": "iv037",
+    "topic": "Causal Inference",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "Users of our mobile app spend 3x more than web users. Should we push everyone to mobile?",
+    "answer": "Not on that evidence. The comparison is observational and almost certainly confounded - people who install the app are already more engaged and higher intent. The app may be a marker of existing loyalty rather than a cause of spending. This is selection, not treatment effect.\n\nThe question I'd want answered is counterfactual: for a user who would otherwise use web, does moving them to the app increase their spending? That's a different quantity from the observed 3x gap, and it's probably much smaller - potentially zero or negative if the push annoys people.\n\nThe clean way to find out is an experiment: randomize which users get the app-install prompt and measure downstream spend across the whole assigned group, not just those who installed. Analyzing only the installers reintroduces exactly the selection bias we're trying to escape - that's why intent-to-treat is the right estimand, with the instrumental-variables version if we want the effect on compliers specifically.\n\nIf an experiment isn't possible, quasi-experimental designs help but with weaker guarantees: difference-in-differences around an app launch, propensity score matching on pre-installation behavior, or a regression discontinuity if there's an arbitrary cutoff. All of them still assume no unmeasured confounding, which is exactly the thing at issue here - intent and engagement are hard to measure.\n\nThe short version I'd say out loud: the 3x number tells us who is valuable, not what makes them valuable.",
+    "key_points": [
+      "Observational gap is confounded by self-selection - app users are pre-engaged",
+      "The decision needs a counterfactual, not a comparison of existing groups",
+      "Randomize the prompt; analyze intent-to-treat across the assigned group",
+      "Analyzing only installers reintroduces selection bias",
+      "Quasi-experimental fallbacks: DiD, propensity matching, RDD - all assume no unmeasured confounding",
+      "The number identifies valuable users, not the cause of value"
+    ],
+    "followups": [
+      "Explain intent-to-treat versus treatment-on-treated",
+      "How does an instrumental variable work here?",
+      "What would make you trust a propensity score analysis?"
+    ]
+  },
+  {
+    "id": "iv038",
+    "topic": "Causal Inference",
+    "difficulty": "hard",
+    "category": "applied",
+    "question": "You need to measure the impact of something you can't randomize - say a TV ad campaign. How?",
+    "answer": "I'd reach for quasi-experimental methods, and be explicit about the assumption each one requires, because that assumption is where the argument actually lives.\n\nDifference-in-differences is usually the first candidate: compare the before-and-after change in exposed markets against the same change in unexposed markets. Subtracting the control group's change removes anything that affected both, like seasonality. The identifying assumption is parallel trends - absent the campaign, both groups would have moved together. I'd support that by plotting pre-period trends over a long window; divergence before treatment invalidates it.\n\nSynthetic control is the stronger version when there's one treated market: build a weighted combination of untreated markets that reproduces the treated market's pre-period trajectory, then use it as the counterfactual. It's well suited to geo-level campaigns.\n\nIf rollout has an arbitrary threshold - a budget cutoff, a scheduling rule - regression discontinuity compares units just above and below it, where assignment is close to random locally.\n\nInterrupted time series works if the change is sharp and other drivers are stable, though it's the weakest since there's no control group.\n\nThe honest caveat: all of these depend on untestable assumptions about unobserved confounders, so I'd present results as a range with sensitivity analysis rather than a point estimate. And I'd push for geo holdouts on the next campaign - randomizing markets is often politically feasible even when randomizing users isn't, and it's worth far more than any post-hoc method.",
+    "key_points": [
+      "Difference-in-differences; identifying assumption is parallel trends - check pre-period visually",
+      "Synthetic control builds a weighted counterfactual for a single treated unit",
+      "Regression discontinuity when there's an arbitrary assignment cutoff",
+      "Interrupted time series is weakest - no control group",
+      "All rest on untestable assumptions -> report ranges and sensitivity analysis",
+      "Push for geo-level randomized holdouts next time"
+    ],
+    "followups": [
+      "How would you check the parallel trends assumption?",
+      "How do you pick donor markets for a synthetic control?",
+      "What's the smallest effect you could detect with geo-level randomization?"
+    ]
+  },
+  {
+    "id": "iv039",
+    "topic": "Statistics",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "What's the difference between MLE and MAP estimation?",
+    "answer": "Maximum likelihood picks the parameters that make the observed data most probable: maximize P(data | theta). Maximum a posteriori picks the parameters most probable given the data: maximize P(theta | data), which by Bayes' rule is proportional to P(data | theta) times P(theta). So MAP is MLE plus a prior.\n\nTaking logs makes the relationship concrete: maximizing the log posterior is maximizing the log likelihood plus the log prior, and that second term is exactly a regularization penalty. A Gaussian prior on the weights gives you L2 regularization; a Laplace prior gives you L1. That's the sense in which ridge and lasso are MAP estimates - regularization is a prior in disguise.\n\nPractically, the difference matters most with small data. MLE with few observations overfits badly and can produce degenerate estimates - with three coin flips all heads, MLE says the coin is 100% biased, while a mild prior pulls that toward something sensible. As data grows the likelihood dominates the prior and the two converge, which is why with plenty of data the choice rarely matters.\n\nThe thing I'd add is that both are point estimates. Neither gives you the uncertainty in theta, which is what the full Bayesian posterior provides. MAP is just the mode of that posterior, and for a skewed posterior the mode can be a poor summary - that's the argument for posterior sampling when uncertainty actually matters for the decision.",
+    "key_points": [
+      "MLE maximizes P(data|theta); MAP maximizes P(theta|data) proportional to P(data|theta)P(theta)",
+      "log posterior = log likelihood + log prior -> the prior IS the regularization term",
+      "Gaussian prior <-> L2 (ridge); Laplace prior <-> L1 (lasso)",
+      "Difference matters most with small data; they converge as n grows",
+      "Both are point estimates - neither quantifies uncertainty in theta",
+      "MAP is the posterior mode, a poor summary for skewed posteriors"
+    ],
+    "followups": [
+      "Show why a Gaussian prior gives the L2 penalty",
+      "When would you need the full posterior rather than MAP?",
+      "What's the difference between a credible interval and a confidence interval?"
+    ]
+  },
+  {
+    "id": "iv040",
+    "topic": "Statistics",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "Explain the central limit theorem and why bootstrapping is useful.",
+    "answer": "The central limit theorem says that the sampling distribution of the mean approaches a normal distribution as sample size grows, regardless of the shape of the underlying population, provided the variance is finite. That's why we can build confidence intervals and run t-tests on data that isn't itself normal - the requirement is normality of the sampling distribution of the statistic, not of the raw data, which is the most commonly misstated part.\n\nThe caveats matter in practice. Convergence speed depends on skew: symmetric distributions converge with a handful of observations, heavily skewed ones like revenue per user may need thousands. And with infinite or undefined variance the theorem simply doesn't apply.\n\nBootstrapping addresses the cases the CLT doesn't cover. You resample your data with replacement many times, compute the statistic on each resample, and use the spread of those values as the sampling distribution. It's useful because the CLT gives you the mean but not much else - there's no clean analytic formula for the sampling distribution of a median, a 90th percentile, a ratio of metrics, or an AUC. Bootstrapping handles all of them the same way.\n\nSo in practice I'd use analytic formulas for means with reasonable sample sizes since they're instant, and bootstrap for weird statistics, heavy-tailed metrics like revenue, or small samples where I don't trust the asymptotics.\n\nBootstrapping isn't magic though: it assumes the sample represents the population, so it can't fix bias, and it struggles with extreme quantiles and dependent data.",
+    "key_points": [
+      "Sampling distribution of the mean -> normal as n grows, whatever the population shape",
+      "Normality is required of the statistic's sampling distribution, not the raw data",
+      "Convergence is slow for heavily skewed data; fails with infinite variance",
+      "Bootstrap = resample with replacement to get an empirical sampling distribution",
+      "Handles medians, percentiles, ratios, AUC - statistics with no clean formula",
+      "Can't fix bias or unrepresentative samples; weak for extreme quantiles and dependent data"
+    ],
+    "followups": [
+      "How many bootstrap resamples would you use?",
+      "How would you bootstrap time series data?",
+      "Why is revenue per user such a hard metric to test?"
+    ]
+  },
+  {
+    "id": "iv041",
+    "topic": "Statistics",
+    "difficulty": "easy",
+    "category": "conceptual",
+    "question": "What's the difference between statistical significance and practical significance?",
+    "answer": "Statistical significance says an effect is unlikely to be pure sampling noise. Practical significance says the effect is large enough to matter. They're independent, and conflating them causes bad decisions in both directions.\n\nWith a very large sample, essentially any nonzero difference becomes statistically significant. A 0.01% conversion lift on ten million users can have a tiny p-value and be worthless - it won't cover the engineering cost of maintaining the feature. Conversely, with a small sample a genuinely large effect can fail to reach significance, and 'not significant' gets misread as 'no effect' when it really means 'we couldn't tell'. Absence of evidence isn't evidence of absence, and that distinction is where underpowered tests do their damage.\n\nThe practice that fixes this is deciding the minimum detectable effect before running - the smallest lift that would actually change the decision - and powering the test for that. Then a null result is informative: we can say the effect is smaller than what we'd act on.\n\nWhen reporting, I'd lead with the confidence interval rather than the p-value, because the interval shows both whether zero is excluded and whether the plausible range includes values worth caring about. An interval of +0.05% to +0.15% is significant and uninteresting; an interval of -1% to +9% is non-significant and very much worth investigating further.",
+    "key_points": [
+      "Significance = unlikely to be noise; practical = large enough to matter",
+      "Large n makes trivial effects significant",
+      "Small n makes real effects non-significant - 'not significant' != 'no effect'",
+      "Pre-specify the minimum detectable effect and power for it",
+      "Report confidence intervals - they show magnitude and uncertainty together"
+    ],
+    "followups": [
+      "How would you set the MDE for a checkout change?",
+      "How do you communicate a null result to a team that wants to ship?",
+      "What does an underpowered significant result tell you about effect size?"
+    ]
+  },
+  {
+    "id": "iv042",
+    "topic": "Bias",
+    "difficulty": "medium",
+    "category": "conceptual",
+    "question": "What is survivorship bias? Give an example from ML work specifically.",
+    "answer": "Survivorship bias is drawing conclusions from the units that made it through some selection process while the ones that didn't are invisible in your data. The classic illustration is Wald's work on WWII aircraft: armor was proposed for the areas where returning planes had the most bullet holes, when the correct inference was the opposite - those were the survivable hits, and the unarmored areas were where hit planes never came back.\n\nIn ML work it shows up constantly. Training a churn model only on currently active customers, so the strongest churn signals are absent. Building a credit model on approved applicants only, since rejected ones have no repayment outcome - that's the reject inference problem, and the model learns to rank within an already-filtered population. Evaluating a recommender on items users clicked, when the ones never surfaced had no chance to be clicked. Training on data your own model already filtered, which is a feedback loop that entrenches whatever the previous model believed.\n\nMitigations depend on the case, but the common thread is getting information about the excluded population: log the decisions and inputs of the filtering system even for rejects, run a small random-exploration holdout that bypasses the model so you observe unfiltered outcomes, or model the selection process explicitly. The exploration holdout is expensive in the short term and usually worth it, because otherwise the training set narrows every cycle.\n\nThe habit I'd keep is asking, for any dataset, what process determined which rows exist at all.",
+    "key_points": [
+      "Conclusions drawn only from units that survived a selection process",
+      "Wald's WWII aircraft armor example",
+      "ML cases: churn on active users, credit on approved applicants, recommenders on clicked items",
+      "Training on your own model's filtered output creates a compounding feedback loop",
+      "Fixes: log rejected cases, random exploration holdouts, model the selection explicitly",
+      "Always ask what process determined which rows exist"
+    ],
+    "followups": [
+      "How would you size an exploration holdout?",
+      "What's reject inference and how is it usually handled?",
+      "How does this interact with fairness concerns?"
+    ]
+  },
+  {
+    "id": "iv043",
+    "topic": "Problem Framing",
+    "difficulty": "medium",
+    "category": "applied",
+    "question": "A product manager asks you to 'add AI' to a feature. How do you handle that?",
+    "answer": "I'd treat it as an unspecified problem statement and work backwards to the decision. My first questions are what user problem this solves, what action changes based on the output, and how we'd know it worked. If nobody can name a decision that changes, there's no model worth building - that conversation saves months.\n\nThen I'd ask whether ML is the right tool at all. ML earns its cost when the rules are complex or changing, the patterns are hard to specify by hand, there's enough labeled data, and mistakes are tolerable. If the logic can be written as a dozen rules, rules are better: cheaper, debuggable, and instantly modifiable. If errors are unacceptable and there's no human review path, that's a strong signal against. A lot of 'AI features' are better served by good search, sensible defaults, or a well-designed form.\n\nIf ML does fit, I'd scope the smallest version that tests the value: a heuristic or off-the-shelf model shipped to a small segment, measured against the metric we agreed on. That gives evidence about whether the value hypothesis holds before investing in a real pipeline. Baselines matter here - I always want to know what a trivial rule achieves, because I've seen carefully built models fail to beat 'recommend the most popular item'.\n\nAnd I'd surface the operational cost early: labeling, monitoring, retraining, on-call, and the failure UX. A model is an ongoing commitment, not a deliverable, and that's usually the part that hasn't been priced in.",
+    "key_points": [
+      "Work backwards from the decision that changes; no decision -> no model",
+      "ML fits complex/changing patterns with data and tolerable errors; rules beat it otherwise",
+      "Ship the smallest version - heuristic or off-the-shelf - to test the value hypothesis",
+      "Always establish a trivial baseline before claiming a model helps",
+      "Price in labeling, monitoring, retraining, on-call, and the failure UX up front"
+    ],
+    "followups": [
+      "How would you push back if the PM insists anyway?",
+      "What baseline would you build first?",
+      "How do you design the UX for when the model is wrong?"
+    ]
+  },
+  {
+    "id": "iv044",
+    "topic": "Communication",
+    "difficulty": "medium",
+    "category": "behavioral",
+    "question": "Tell me about a model you shipped. What did you learn?",
+    "answer": "This is a structure question more than a knowledge question, so I'd answer with a clear arc rather than a chronology.\n\nSituation and stakes: what the business problem was, who was affected, and what it cost to leave it unsolved. Keep it short but quantified where possible.\n\nWhat I did and why: the approach, and critically the alternatives I rejected and the reasoning. Interviewers are listening for judgment, not tool names. 'I used XGBoost' says little; 'I started with logistic regression as a baseline because we needed adverse-action explanations, and only moved to a monotonic GBM when the lift justified the extra review burden' says a lot.\n\nThe obstacle: something genuinely went wrong. This is the part most candidates skip and it's the part that carries the signal - a leaky feature, a shifting label definition, a pipeline that couldn't compute a feature at serving time.\n\nOutcome with real numbers: the metric moved, the business impact, and honestly whether it was as much as hoped.\n\nThe learning, specific and preferably uncomfortable. Generic lessons like 'communication is important' are forgettable. Something like 'I now write the serving path before finalizing features, because I once built a model around a feature that took four hours to compute and couldn't be served in real time' is memorable and demonstrates the lesson stuck.\n\nThe most common failure here is spending 80% of the time on modeling detail and 20% on impact. Interviewers usually want the reverse.",
+    "key_points": [
+      "Structure: situation/stakes -> approach and rejected alternatives -> obstacle -> quantified outcome -> specific learning",
+      "Explain why, not just what - judgment is the signal, not tool names",
+      "Include a real failure; it carries most of the information",
+      "Quantify impact and be honest if it underdelivered",
+      "Make the lesson concrete and slightly uncomfortable, not generic",
+      "Weight the story toward impact, not modeling minutiae"
+    ],
+    "followups": [
+      "What would you do differently with the same problem today?",
+      "What did the model NOT solve?",
+      "How did you convince stakeholders to trust it?"
+    ]
+  },
+  {
+    "id": "iv045",
+    "topic": "Communication",
+    "difficulty": "medium",
+    "category": "behavioral",
+    "question": "Explain precision and recall to someone with no technical background.",
+    "answer": "I'd anchor it in a concrete scenario rather than defining terms first, and I'd avoid the words positive and negative entirely since they invert confusingly.\n\nSomething like: imagine a spam filter. Precision asks - of the emails it moved to spam, how many really were spam? Recall asks - of all the spam that arrived, how much did it catch? They're different questions and you can be great at one while being terrible at the other.\n\nThen make the tradeoff tangible. A filter that flags every single email has perfect recall - it caught all the spam - but terrible precision, since your inbox is empty and you've lost real mail. A filter that only flags the one message it's absolutely certain about has perfect precision and awful recall. Neither is useful, and where you want to sit depends on which mistake hurts more. For spam, losing a real email is much worse than seeing an occasional spam message, so you'd favor precision.\n\nThen I'd connect it to their actual decision, which is the part that matters: 'for our fraud case, missing fraud costs us the chargeback, while a false alarm costs a customer being annoyed and a support call - so tell me roughly how those compare and I'll tune it accordingly.'\n\nThe general technique I'm applying: one concrete domain example, no jargon, make the tradeoff physical, then hand the tradeoff back to the person who owns the business decision.",
+    "key_points": [
+      "Use one concrete scenario; avoid 'positive/negative' language",
+      "Precision: of what we flagged, how much was right? Recall: of what existed, how much did we catch?",
+      "Make the tradeoff tangible with the two degenerate extremes",
+      "Tie it to which mistake costs more in their domain",
+      "Hand the tradeoff back to the business owner as a decision"
+    ],
+    "followups": [
+      "Now explain F1 to the same person",
+      "How would you explain a confidence interval to them?",
+      "How would you explain why the model can't just be 'more accurate'?"
+    ]
+  },
+  {
+    "id": "iv046",
+    "topic": "Fairness",
+    "difficulty": "hard",
+    "category": "applied",
+    "question": "Your hiring model shows different selection rates across demographic groups. Walk me through how you'd handle it.",
+    "answer": "First I'd establish what's actually happening before deciding what it means. Different selection rates alone don't establish that the model is doing something wrong - they could reflect differences in the applicant pool, differences in the label, or genuine bias in the model. Those have different remedies.\n\nThe most important check is the label. If the model was trained on past hiring decisions, it learned to reproduce those decisions including any historical bias. In that case the model is faithful to a biased target, and no amount of algorithmic adjustment fixes a label that encodes the wrong thing. I'd want to know what 'good hire' meant in the training data and whether that definition is defensible.\n\nThen proxies. Removing protected attributes doesn't remove their influence, because features like ZIP code, school, or employment gaps correlate with them. I'd audit feature importance and check for redundant encoding.\n\nOn metrics, I'd be explicit that fairness definitions conflict mathematically - demographic parity, equalized odds, and calibration within groups generally cannot all hold simultaneously when base rates differ. So the team has to choose which definition applies, and that's a legal and ethical decision, not a technical one. I'd bring options and the tradeoffs, not pick unilaterally.\n\nGiven the domain, I'd also flag this as a regulated area - hiring has specific legal standards like the four-fifths rule, and this needs legal and HR involved, documented decisions, and ongoing auditing rather than a one-time fix. And I'd be willing to say that if we can't establish the model is fair, not shipping is a legitimate outcome.",
+    "key_points": [
+      "Different rates != proof of model bias - check pool, label, and model separately",
+      "Biased historical labels can't be fixed by algorithmic adjustment",
+      "Removing protected attributes doesn't remove proxies (ZIP, school, gaps)",
+      "Fairness definitions are mathematically incompatible when base rates differ",
+      "Choosing a definition is an ethical/legal decision - bring options, don't decide alone",
+      "Hiring is regulated (e.g. four-fifths rule): involve legal/HR, document, audit continuously",
+      "Not shipping is a legitimate outcome"
+    ],
+    "followups": [
+      "Explain why demographic parity and equalized odds conflict",
+      "How would you audit for proxy variables?",
+      "What would you monitor after deployment?"
+    ]
+  }
+]
